@@ -2,11 +2,13 @@
 #include "MainServer.h"
 #include <iostream>
 #include <WinSock2.h>
+#include <cstdint>
 
 using namespace RatkiniaServer;
 
 int main()
 {
+    int8_t a;
     SetConsoleOutputCP(65001);
 
     WSAData wsaData;
@@ -17,8 +19,8 @@ int main()
 
     MainServer mainServer;
 
-    NetworkServer ioServer{mainServer};
-    ioServer.Start("127.0.0.1", 1);
+    NetworkServer networkServer{ mainServer};
+    networkServer.Start("127.0.0.1", 1);
 
     std::cout << mainServer.Run() << std::endl;
 
