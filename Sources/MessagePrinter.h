@@ -18,6 +18,13 @@ public:
         ((std::cout << args << " "), ...) << std::endl;
     }
 
+    template<typename ...Args>
+    static void WriteErrorLine(Args...args)
+    {
+        std::lock_guard<std::mutex> lock{mutex};
+        ((std::cerr << args << " "), ...) << std::endl;
+    }
+
 private:
     inline static std::mutex mutex;
 };

@@ -6,7 +6,7 @@
 #define MAINSERVER_H
 
 #include <string>
-#include <atomic>
+#include <mutex>
 
 namespace RatkiniaServer
 {
@@ -15,13 +15,13 @@ namespace RatkiniaServer
     public:
         explicit MainServer();
 
-        const std::string& Run();
+        void Run();
 
-        void RequestTerminate(int code, std::string reason);
+        void RequestTerminate();
 
     private:
-        std::atomic_bool shouldTerminate_;
-        std::string terminateReason_;
+        std::mutex terminateOperationMutex_;
+        bool shouldTerminate_;
     };
 }
 
