@@ -3,3 +3,5 @@
 //
 
 #include "Session.h"
+#include "stc.pb.h"
+#include <openssl/opensslv.h>

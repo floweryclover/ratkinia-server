@@ -174,7 +174,6 @@ void NetworkServer::WorkerThreadBody(const int threadId)
 
         const OverlappedEx& context = *reinterpret_cast<OverlappedEx*>(overlapped);
 
-
         if (context.Type == IOType::Accept)
         {
             MessagePrinter::WriteLine("Accept");

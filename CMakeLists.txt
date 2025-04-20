@@ -8,4 +8,10 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-target_link_libraries(${PROJECT_NAME} ws2_32 mswsock)
+file(GLOB PROTOBUF_LIBS "${CMAKE_SOURCE_DIR}/Thirdparty/Protobuf/lib/*lib")
+file(GLOB OPENSSL_LIBS "${CMAKE_SOURCE_DIR}/Thirdparty/OpenSSL/lib/*lib")
+
+target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32 mswsock ${PROTOBUF_LIBS} ${OPENSSL_LIBS})
+target_include_directories(${PROJECT_NAME} PRIVATE
+        "${CMAKE_SOURCE_DIR}/Thirdparty/Protobuf/include"
+        "${CMAKE_SOURCE_DIR}/Thirdparty/OpenSSL/include")
