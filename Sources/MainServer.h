@@ -5,24 +5,18 @@
 #ifndef MAINSERVER_H
 #define MAINSERVER_H
 
-#include <string>
-#include <mutex>
+#include "Channel.h"
+#include "MainServerPipe.h"
 
-namespace RatkiniaServer
+class MainServer final
 {
-    class MainServer final
-    {
-    public:
-        explicit MainServer();
+public:
+    explicit MainServer(MpscReceiver<MainServerPipe> mainServerReceiver);
 
-        void Run();
+    void Run();
 
-        void RequestTerminate();
-
-    private:
-        std::mutex terminateOperationMutex_;
-        bool shouldTerminate_;
-    };
-}
+private:
+    MpscReceiver<MainServerPipe> mainServerReceiver_;
+};
 
 #endif //MAINSERVER_H

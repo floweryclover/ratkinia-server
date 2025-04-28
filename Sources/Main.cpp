@@ -1,9 +1,7 @@
 ﻿#include "NetworkServer.h"
 #include "MainServer.h"
-#include <iostream>
+#include "GameServer.h"
 #include <WinSock2.h>
-
-using namespace RatkiniaServer;
 
 int main()
 {
@@ -15,27 +13,20 @@ int main()
         return 1;
     }
 
-    MainServer mainServer;
+    auto [mainServerSender, mainServerReceiver] = CreateMpscChannel<MainServerPipe>();
+    auto [gameServerSender, gameServerReceiver] = CreateMpscChannel<GameServerPipe>();
+    auto [networkServerSender, networkServerReceiver] = CreateMpscChannel<NetworkServerPipe>();
 
-    NetworkServer networkServer{ mainServer };
+    GameServer gameServer{ std::move(gameServerReceiver),
+                           mainServerSender,
+                           networkServerSender };
+    NetworkServer networkServer{ std::move(networkServerReceiver),
+                                 std::move(mainServerSender),
+                                 std::move(gameServerSender) };
+    gameServer.Start();
     networkServer.Start("127.0.0.1", 31415);
 
-    SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    SOCKADDR_IN  sockaddrIn {};
-    inet_pton(AF_INET, "127.0.0.1", &sockaddrIn.sin_addr);
-    sockaddrIn.sin_family =AF_INET;
-    sockaddrIn.sin_port = htons(31415);
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-    if (connect(clientSocket, reinterpret_cast<sockaddr*>(&sockaddrIn), sizeof (SOCKADDR_IN)))
-    {
-        std::cout << "에러: " << WSAGetLastError() << std::endl;
-    }
-    else
-    {
-        std::cout << "성공!" << std::endl;
-    }
-
+    MainServer mainServer{ std::move(mainServerReceiver) };
     mainServer.Run();
 
     WSACleanup();

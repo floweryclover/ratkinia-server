@@ -3,11 +3,10 @@
 //
 
 #include "MainServer.h"
+#include "MessagePrinter.h"
 
-using namespace RatkiniaServer;
-
-MainServer::MainServer()
-    : shouldTerminate_{ false }
+MainServer::MainServer(MpscReceiver<MainServerPipe> mainServerReceiver)
+    : mainServerReceiver_{std::move(mainServerReceiver)}
 {
 }
 
@@ -15,19 +14,18 @@ void MainServer::Run()
 {
     while (true)
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        mainServerReceiver_.Wait();
+        if (mainServerReceiver_.Closed())
         {
-            std::lock_guard<std::mutex> lock{ terminateOperationMutex_ };
-            if (shouldTerminate_)
-            {
-                break;
-            }
+            MessagePrinter::WriteLine("MainServer Receiver closed");
+            break;
+        }
+
+        MainServerPipe::Command command;
+        if (mainServerReceiver_.TryPeek(command))
+        {
+            MessagePrinter::WriteLine("MainServer Receiver Command");
+            break;
         }
     }
-}
-
-void MainServer::RequestTerminate()
-{
-    std::lock_guard<std::mutex> lock{ terminateOperationMutex_ };
-    shouldTerminate_ = true;
 }
