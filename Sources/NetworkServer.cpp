@@ -6,6 +6,7 @@
 #include "MainServer.h"
 #include "MessagePrinter.h"
 #include "Errors.h"
+#include "google/protobuf/message_lite.h"
 #include <MSWSock.h>
 
 using namespace RatkiniaServer;
@@ -118,7 +119,7 @@ void NetworkServer::Start(const std::string& listenAddress, unsigned short liste
 
     for (int i = 0; i < AcceptPoolSize; ++i)
     {
-        if (!AcceptAsync(acceptContexts_[i]))
+        if (!AcceptAsync())
         {
             mainServer_.RequestTerminate();
             return;
@@ -154,7 +155,7 @@ void NetworkServer::WorkerThreadBody(const int threadId)
                                       "Session Id:",
                                       acceptContext.SessionId);
                     sessions_.erase(acceptContext.SessionId);
-                    if (!AcceptAsync(acceptContext))
+                    if (!AcceptAsync())
                     {
                         mainServer_.RequestTerminate();
                         return;
@@ -176,107 +177,98 @@ void NetworkServer::WorkerThreadBody(const int threadId)
 
         if (context.Type == IOType::Accept)
         {
-            MessagePrinter::WriteLine("Accept");
+            auto& acceptContext = *reinterpret_cast<AcceptContext*>(reinterpret_cast<size_t>(overlapped));
+            PostAccept(sessions_.at(acceptContext.SessionId));
+            acceptContext.SessionId = NullSessionId;
         }
         else if (context.Type == IOType::Receive)
         {
-            MessagePrinter::WriteLine("Receive");
+            PostReceive(*reinterpret_cast<Session*>(completionKey), bytesTransferred);
         }
         else
         {
             MessagePrinter::WriteLine("Send");
         }
-
-        if (context.Type == IOType::Accept)
-        {
-            auto& acceptContext = *reinterpret_cast<AcceptContext*>(reinterpret_cast<size_t>(overlapped)
-                                                                    - 8);
-            Session& session = sessions_.at(acceptContext.SessionId);
-
-            SOCKADDR_IN* localAddr;
-            int localAddrlen;
-            SOCKADDR_IN* remoteAddr;
-            int remoteAddrlen;
-
-            GetAcceptExSockaddrs(session.GetFilledReceiveBuffer().Pointer,
-                                 0,
-                                 sizeof(SOCKADDR_IN) + 16,
-                                 sizeof(SOCKADDR_IN) + 16,
-                                 reinterpret_cast<sockaddr**>(&localAddr),
-                                 &localAddrlen,
-                                 reinterpret_cast<sockaddr**>(&remoteAddr),
-                                 &remoteAddrlen);
-
-            char buf[INET_ADDRSTRLEN];
-            if (inet_ntop(AF_INET, &remoteAddr->sin_addr, buf, INET_ADDRSTRLEN) == nullptr)
-            {
-                MessagePrinter::WriteLine("알 수 없는 클라이언트 접속");
-            }
-            else
-            {
-                MessagePrinter::WriteLine(buf, "접속");
-            }
-            if (!AcceptAsync(acceptContext))
-            {
-                mainServer_.RequestTerminate();
-            }
-            continue;
-        }
     }
 }
 
-bool NetworkServer::AcceptAsync(AcceptContext& acceptContext)
+bool NetworkServer::AcceptAsync()
 {
-    while (sessions_.contains(newSessionId_))
+    while (sessions_.contains(newSessionId_) || newSessionId_ == NullSessionId)
     {
         newSessionId_ += 1;
     }
     const auto sessionId = newSessionId_;
 
-    const auto acceptSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (acceptSocket == INVALID_SOCKET)
+    AcceptContext* acceptContext = nullptr;
+    for (int i = 0; i < AcceptPoolSize; ++i)
+    {
+        if (acceptContexts_[i].SessionId == NullSessionId)
+        {
+            acceptContext = &acceptContexts_[i];
+            break;
+        }
+    }
+    if (!acceptContext)
+    {
+        ERR_PRINT_VARARGS("AcceptContext 확보에 실패하였습니다.");
+        return false;
+    }
+
+    const auto clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (clientSocket == INVALID_SOCKET)
     {
         ERR_PRINT_VARARGS("Accept 소켓 생성에 실패하였습니다:", WSAGetLastError());
         return false;
     }
 
-    auto [iter, result] = sessions_.emplace(newSessionId_,
-                                            Session{ acceptSocket, SessionBufferSize });
-    auto& session = iter->second;
 
-    const auto freeBufferData = session.GetFreeReceiveBuffer();
-    if (freeBufferData.Size < sizeof(SOCKADDR_IN) * 2 + 32)
+    ZeroMemory(acceptContext, sizeof(AcceptContext));
+    acceptContext->Context.Type = IOType::Accept;
+    acceptContext->SessionId = sessionId;
+
+    auto [iter, result] = sessions_.emplace(std::piecewise_construct,
+                                            std::forward_as_tuple(newSessionId_),
+                                            std::forward_as_tuple(clientSocket, SessionBufferSize));
+    auto& session = iter->second;
+    if (nullptr
+        == CreateIoCompletionPort(reinterpret_cast<HANDLE>(clientSocket),
+                                  iocpHandle_,
+                                  reinterpret_cast<ULONG_PTR>(&session),
+                                  0))
     {
-        ERR_PRINT_VARARGS("세션 버퍼 크기가 충분하지 않습니다.");
-        closesocket(acceptSocket);
+        ERR_PRINT_VARARGS("생성한 ClientSocket의 IOCP 핸들로의 연결 작업에 실패했습니다:", GetLastError());
+        acceptContext->SessionId = NullSessionId;
         sessions_.erase(sessionId);
         return false;
     }
 
-    ZeroMemory(&acceptContext, sizeof(AcceptContext));
-    acceptContext.SessionId = sessionId;
-    acceptContext.Context.Type = IOType::Accept;
-
-    if (FALSE
-        == AcceptEx(listenSocket_,
-                    acceptSocket,
-                    freeBufferData.Pointer,
-                    0,
-                    sizeof(SOCKADDR_IN) + 16,
-                    sizeof(SOCKADDR_IN) + 16,
-                    nullptr,
-                    reinterpret_cast<LPOVERLAPPED>(&acceptContext.Context)))
+    if (!session.AcceptAsync(listenSocket_, reinterpret_cast<LPOVERLAPPED>(&acceptContext)))
     {
-        const auto lastError = WSAGetLastError();
-        if (lastError != ERROR_IO_PENDING)
-        {
-            ERR_PRINT_VARARGS("AcceptEx() 호출 실패:", lastError);
-            closesocket(acceptSocket);
-            sessions_.erase(sessionId);
-            return false;
-        }
+        acceptContext->SessionId = NullSessionId;
+        sessions_.erase(sessionId);
+        return false;
     }
 
     return true;
+}
+
+void NetworkServer::PostAccept(Session& session)
+{
+    session.PostAccept();
+    session.ReceiveAsync();
+}
+
+void NetworkServer::PostReceive(Session& session, const size_t bytesTransferred)
+{
+    session.PostReceive(bytesTransferred);
+    while (session.TryPopMessage(*this));
+}
+
+void NetworkServer::HandleCtsMessage(uint16_t messageType,
+                                     uint16_t messageBodyLength,
+                                     const char* bodyBuffer)
+{
+IMessageFilter
 }
 

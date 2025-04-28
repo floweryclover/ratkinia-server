@@ -28,11 +28,14 @@ namespace RatkiniaServer
 
         void Start(const std::string& listenAddress, unsigned short listenPort);
 
+        void HandleCtsMessage(uint16_t messageType, uint16_t messageBodyLength, const char* bodyBuffer);
+
     private:
+        static constexpr uint64_t NullSessionId = 0xffffffffffffffff;
         struct AcceptContext final
         {
-            uint64_t SessionId {};
             OverlappedEx Context {};
+            uint64_t SessionId {};
         };
 
         static constexpr int AcceptPoolSize = 8;
@@ -50,7 +53,11 @@ namespace RatkiniaServer
 
         void WorkerThreadBody(int threadId);
 
-        bool AcceptAsync(AcceptContext& acceptContext);
+        bool AcceptAsync();
+
+        void PostAccept(Session& session);
+
+        void PostReceive(Session& session, size_t bytesTransferred);
     };
 }
 
