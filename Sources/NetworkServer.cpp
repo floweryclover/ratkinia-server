@@ -1,4 +1,4 @@
-﻿//
+//
 // Created by floweryclover on 2025-03-31.
 //
 
@@ -6,17 +6,19 @@
 #include "MainServer.h"
 #include "MessagePrinter.h"
 #include "Errors.h"
-#include <MSWSock.h>
 
-using namespace RatkiniaServer;
-
-NetworkServer::NetworkServer(MainServer& mainServer)
-    : mainServer_{ mainServer },
+NetworkServer::NetworkServer(MpscReceiver<NetworkServerPipe> networkServerReceiver,
+                             MpscSender<MainServerPipe> mainServerSender,
+                             MpscSender<GameServerPipe> gameServerSender)
+    : networkServerReceiver_{ std::move(networkServerReceiver) },
+      mainServerSender_{ std::move(mainServerSender) },
+      gameServerSender_{ std::move(gameServerSender) },
       listenSocket_{ INVALID_SOCKET },
       iocpHandle_{ nullptr },
-      newSessionId_{ 0 }
+      newSessionId_{ 0 },
+      acceptContexts_{ std::make_unique<AcceptContext[]>(AcceptPoolSize) }
 {
-    acceptContexts_ = std::make_unique<AcceptContext[]>(AcceptPoolSize);
+
 }
 
 NetworkServer::~NetworkServer()
@@ -45,7 +47,7 @@ void NetworkServer::Start(const std::string& listenAddress, unsigned short liste
     if (iocpHandle_ != nullptr)
     {
         ERR_PRINT_VARARGS("NetworkServer::Start()가 두 번 이상 호출되었습니다.");
-        mainServer_.RequestTerminate();
+        mainServerSender_.Send(MainServerPipe::Command::Shutdown);
         return;
     }
 
@@ -53,7 +55,7 @@ void NetworkServer::Start(const std::string& listenAddress, unsigned short liste
     if (iocpHandle_ == nullptr)
     {
         ERR_PRINT_VARARGS("IOCP 핸들 생성에 실패하였습니다.");
-        mainServer_.RequestTerminate();
+        mainServerSender_.Send(MainServerPipe::Command::Shutdown);
         return;
     }
 
@@ -69,7 +71,7 @@ void NetworkServer::Start(const std::string& listenAddress, unsigned short liste
     if (inet_pton(AF_INET, listenAddress.c_str(), &sockaddrIn.sin_addr) != 1)
     {
         ERR_PRINT_VARARGS("IP 문자열 변환에 실패하였습니다:", listenAddress);
-        mainServer_.RequestTerminate();
+        mainServerSender_.Send(MainServerPipe::Command::Shutdown);
         return;
     }
 
@@ -77,7 +79,7 @@ void NetworkServer::Start(const std::string& listenAddress, unsigned short liste
     if (listenSocket_ == INVALID_SOCKET)
     {
         ERR_PRINT_VARARGS("리슨 소켓 생성에 실패하였습니다: ", WSAGetLastError());
-        mainServer_.RequestTerminate();
+        mainServerSender_.Send(MainServerPipe::Command::Shutdown);
         return;
     }
 
@@ -87,7 +89,7 @@ void NetworkServer::Start(const std::string& listenAddress, unsigned short liste
                                           0))
     {
         ERR_PRINT_VARARGS("리슨 소켓을 IOCP 핸들에 연결시키는 작업에 실패하였습니다: ", GetLastError());
-        mainServer_.RequestTerminate();
+        mainServerSender_.Send(MainServerPipe::Command::Shutdown);
     }
 
     int option = 1;
@@ -97,30 +99,41 @@ void NetworkServer::Start(const std::string& listenAddress, unsigned short liste
                                    reinterpret_cast<char*>(&option),
                                    sizeof(option)))
     {
-        ERR_PRINT_VARARGS("리슨 소켓 옵션 설정에 실패하였습니다:", WSAGetLastError());
-        mainServer_.RequestTerminate();
+        ERR_PRINT_VARARGS("리슨 소켓 SO_REUSEADDR 설정에 실패하였습니다:", WSAGetLastError());
+        mainServerSender_.Send(MainServerPipe::Command::Shutdown);
+        return;
+    }
+    if (SOCKET_ERROR == setsockopt(listenSocket_,
+                                   IPPROTO_TCP,
+                                   TCP_NODELAY,
+                                   reinterpret_cast<char*>(&option),
+                                   sizeof(option)))
+    {
+        ERR_PRINT_VARARGS("리슨 소켓 TCP_NODELAY 설정에 실패하였습니다:", WSAGetLastError());
+        mainServerSender_.Send(MainServerPipe::Command::Shutdown);
         return;
     }
 
     if (bind(listenSocket_, reinterpret_cast<sockaddr*>(&sockaddrIn), sizeof(SOCKADDR_IN)))
     {
         ERR_PRINT_VARARGS("리슨 소켓 바인딩에 실패하였습니다:", WSAGetLastError());
-        mainServer_.RequestTerminate();
+        mainServerSender_.Send(MainServerPipe::Command::Shutdown);
         return;
     }
 
     if (listen(listenSocket_, AcceptPoolSize))
     {
         ERR_PRINT_VARARGS("리슨 소켓 listen()에 실패하였습니다:", WSAGetLastError());
-        mainServer_.RequestTerminate();
+        mainServerSender_.Send(MainServerPipe::Command::Shutdown);
         return;
     }
 
     for (int i = 0; i < AcceptPoolSize; ++i)
     {
-        if (!AcceptAsync(acceptContexts_[i]))
+        acceptContexts_[i].SessionId = NullSessionId;
+        if (!AcceptAsync())
         {
-            mainServer_.RequestTerminate();
+            mainServerSender_.Send(MainServerPipe::Command::Shutdown);
             return;
         }
     }
@@ -129,39 +142,38 @@ void NetworkServer::Start(const std::string& listenAddress, unsigned short liste
 void NetworkServer::WorkerThreadBody(const int threadId)
 {
     MessagePrinter::WriteLine("IOCP 워커 스레드", threadId, "시작");
-    while (!shouldStop_.load(std::memory_order_relaxed))
+    while (!shouldStop_.load(std::memory_order_acquire))
     {
         DWORD bytesTransferred = 0;
         LPOVERLAPPED overlapped = nullptr;
         ULONG_PTR completionKey = 0;
-        if (GetQueuedCompletionStatus(iocpHandle_,
+        if (FALSE == GetQueuedCompletionStatus(iocpHandle_,
                                       &bytesTransferred,
                                       &completionKey,
                                       &overlapped,
-                                      INFINITE) == FALSE)
+                                      1000))
         {
-            MessagePrinter::WriteErrorLine("Error", GetLastError());
             if (completionKey != 0) // 타임아웃 외 오류
             {
+                MessagePrinter::WriteErrorLine("IOCP 워커 스레드", threadId, "GQCS() 에러:", GetLastError());
                 const OverlappedEx& context = *reinterpret_cast<OverlappedEx*>(overlapped);
                 if (context.Type == IOType::Accept)
                 {
-                    auto& acceptContext = *reinterpret_cast<AcceptContext*>(reinterpret_cast<size_t>(overlapped)
-                                                                            - 8);
+                    auto& acceptContext = *reinterpret_cast<AcceptContext*>(overlapped);
 
-                    ERR_PRINT_VARARGS("GQCS() 에러:",
+                    ERR_PRINT_VARARGS("Accept 에러:",
                                       WSAGetLastError(),
                                       "Session Id:",
                                       acceptContext.SessionId);
                     sessions_.erase(acceptContext.SessionId);
-                    if (!AcceptAsync(acceptContext))
+                    acceptContext.SessionId = NullSessionId;
+                    if (!AcceptAsync())
                     {
-                        mainServer_.RequestTerminate();
-                        return;
+                        mainServerSender_.Send(MainServerPipe::Command::Shutdown);
+                        break;
                     }
                     continue;
                 }
-                MessagePrinter::WriteLine("IOCP 워커 스레드", threadId, "GQCS() 에러:", GetLastError());
             }
             continue;
         }
@@ -176,107 +188,114 @@ void NetworkServer::WorkerThreadBody(const int threadId)
 
         if (context.Type == IOType::Accept)
         {
-            MessagePrinter::WriteLine("Accept");
+            auto& acceptContext = *reinterpret_cast<AcceptContext*>(reinterpret_cast<size_t>(overlapped));
+            PostAccept(sessions_.at(acceptContext.SessionId));
+            acceptContext.SessionId = NullSessionId;
         }
         else if (context.Type == IOType::Receive)
         {
-            MessagePrinter::WriteLine("Receive");
+            PostReceive(*reinterpret_cast<Session*>(completionKey), bytesTransferred);
         }
         else
         {
             MessagePrinter::WriteLine("Send");
         }
-
-        if (context.Type == IOType::Accept)
-        {
-            auto& acceptContext = *reinterpret_cast<AcceptContext*>(reinterpret_cast<size_t>(overlapped)
-                                                                    - 8);
-            Session& session = sessions_.at(acceptContext.SessionId);
-
-            SOCKADDR_IN* localAddr;
-            int localAddrlen;
-            SOCKADDR_IN* remoteAddr;
-            int remoteAddrlen;
-
-            GetAcceptExSockaddrs(session.GetFilledReceiveBuffer().Pointer,
-                                 0,
-                                 sizeof(SOCKADDR_IN) + 16,
-                                 sizeof(SOCKADDR_IN) + 16,
-                                 reinterpret_cast<sockaddr**>(&localAddr),
-                                 &localAddrlen,
-                                 reinterpret_cast<sockaddr**>(&remoteAddr),
-                                 &remoteAddrlen);
-
-            char buf[INET_ADDRSTRLEN];
-            if (inet_ntop(AF_INET, &remoteAddr->sin_addr, buf, INET_ADDRSTRLEN) == nullptr)
-            {
-                MessagePrinter::WriteLine("알 수 없는 클라이언트 접속");
-            }
-            else
-            {
-                MessagePrinter::WriteLine(buf, "접속");
-            }
-            if (!AcceptAsync(acceptContext))
-            {
-                mainServer_.RequestTerminate();
-            }
-            continue;
-        }
     }
+    MessagePrinter::WriteLine("IOCP 워커 스레드", threadId, "종료");
 }
 
-bool NetworkServer::AcceptAsync(AcceptContext& acceptContext)
+bool NetworkServer::AcceptAsync()
 {
-    while (sessions_.contains(newSessionId_))
+    while (sessions_.contains(newSessionId_) || newSessionId_ == NullSessionId)
     {
         newSessionId_ += 1;
     }
     const auto sessionId = newSessionId_;
 
-    const auto acceptSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (acceptSocket == INVALID_SOCKET)
+    AcceptContext* acceptContext = nullptr;
+    for (int i = 0; i < AcceptPoolSize; ++i)
+    {
+        if (acceptContexts_[i].SessionId == NullSessionId)
+        {
+            acceptContext = &acceptContexts_[i];
+            break;
+        }
+    }
+    if (!acceptContext)
+    {
+        ERR_PRINT_VARARGS("AcceptContext 확보에 실패하였습니다.");
+        return false;
+    }
+    ZeroMemory(acceptContext, sizeof(AcceptContext));
+    acceptContext->Context.Type = IOType::Accept;
+    acceptContext->SessionId = sessionId;
+
+    const auto clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (clientSocket == INVALID_SOCKET)
     {
         ERR_PRINT_VARARGS("Accept 소켓 생성에 실패하였습니다:", WSAGetLastError());
         return false;
     }
 
-    auto [iter, result] = sessions_.emplace(newSessionId_,
-                                            Session{ acceptSocket, SessionBufferSize });
+
+
+    auto [iter, result] = sessions_.emplace(std::piecewise_construct,
+                                            std::forward_as_tuple(newSessionId_),
+                                            std::forward_as_tuple(clientSocket, newSessionId_));
     auto& session = iter->second;
 
-    const auto freeBufferData = session.GetFreeReceiveBuffer();
-    if (freeBufferData.Size < sizeof(SOCKADDR_IN) * 2 + 32)
+    if (!session.AcceptAsync(listenSocket_, reinterpret_cast<LPOVERLAPPED>(acceptContext)))
     {
-        ERR_PRINT_VARARGS("세션 버퍼 크기가 충분하지 않습니다.");
-        closesocket(acceptSocket);
+        acceptContext->SessionId = NullSessionId;
         sessions_.erase(sessionId);
         return false;
     }
 
-    ZeroMemory(&acceptContext, sizeof(AcceptContext));
-    acceptContext.SessionId = sessionId;
-    acceptContext.Context.Type = IOType::Accept;
-
-    if (FALSE
-        == AcceptEx(listenSocket_,
-                    acceptSocket,
-                    freeBufferData.Pointer,
-                    0,
-                    sizeof(SOCKADDR_IN) + 16,
-                    sizeof(SOCKADDR_IN) + 16,
-                    nullptr,
-                    reinterpret_cast<LPOVERLAPPED>(&acceptContext.Context)))
-    {
-        const auto lastError = WSAGetLastError();
-        if (lastError != ERROR_IO_PENDING)
-        {
-            ERR_PRINT_VARARGS("AcceptEx() 호출 실패:", lastError);
-            closesocket(acceptSocket);
-            sessions_.erase(sessionId);
-            return false;
-        }
-    }
-
     return true;
 }
+
+void NetworkServer::PostAccept(Session& session)
+{
+    if (!session.PostAccept(iocpHandle_))
+    {
+        sessions_.erase(session.SessionId);
+        return;
+    }
+    if (!session.ReceiveAsync())
+    {
+        sessions_.erase(session.SessionId);
+    }
+}
+
+void NetworkServer::PostReceive(Session& session, const size_t bytesTransferred)
+{
+    session.PostReceive(bytesTransferred);
+    while (session.TryPopMessage([this](auto sessionId, auto messageType, auto bodySize, auto body)
+                                 {
+                                     return gameServerSender_.Send(GameServerPipe::PipeMessage{ sessionId,
+                                                                                                messageType,
+                                                                                                bodySize,
+                                                                                                body});
+                                 },
+                                 [this](auto sessionId)
+                                 {
+                                     OnMessagePushFailed(sessionId);
+                                 }));
+    if (!session.ReceiveAsync())
+    {
+        sessions_.erase(session.SessionId);
+    }
+}
+
+void NetworkServer::OnMessagePushFailed(size_t sessionId)
+{
+    MessagePrinter::WriteErrorLine("NetworkServer -> GameServer 메시지 큐 Push에 실패하였습니다:", sessionId);
+    sessions_.erase(sessionId);
+}
+
+void NetworkServer::DisconnectSession(uint64_t session)
+{
+
+}
+
 
