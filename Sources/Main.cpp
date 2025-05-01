@@ -26,16 +26,6 @@ int main()
     sockaddrIn.sin_family =AF_INET;
     sockaddrIn.sin_port = htons(31415);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-    if (connect(clientSocket, reinterpret_cast<sockaddr*>(&sockaddrIn), sizeof (SOCKADDR_IN)))
-    {
-        std::cout << "에러: " << WSAGetLastError() << std::endl;
-    }
-    else
-    {
-        std::cout << "성공!" << std::endl;
-    }
-
     mainServer.Run();
 
     WSACleanup();
