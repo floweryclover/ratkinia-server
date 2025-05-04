@@ -15,6 +15,8 @@
 #include <memory>
 #include <unordered_map>
 
+class MpscMessageQueue;
+
 namespace RatkiniaServer
 {
     class MainServer;
@@ -22,13 +24,13 @@ namespace RatkiniaServer
     class NetworkServer final
     {
     public:
-        explicit NetworkServer(MainServer& mainServer);
+        explicit NetworkServer(MainServer& mainServer, MpscMessageQueue& messageQueue);
 
         ~NetworkServer();
 
         void Start(const std::string& listenAddress, unsigned short listenPort);
 
-        void HandleCtsMessage(uint16_t messageType, uint16_t messageBodyLength, const char* bodyBuffer);
+        void OnMessagePushFailed(size_t sessionId);
 
     private:
         static constexpr uint64_t NullSessionId = 0xffffffffffffffff;
@@ -42,6 +44,8 @@ namespace RatkiniaServer
         static constexpr size_t SessionBufferSize = 1024;
 
         MainServer& mainServer_;
+        MpscMessageQueue& messageQueue_;
+
         SOCKET listenSocket_;
         HANDLE iocpHandle_;
         std::vector<std::thread> workerThreads_;

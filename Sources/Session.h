@@ -18,20 +18,21 @@ enum class IOType : uint8_t
 
 struct OverlappedEx final
 {
-    OVERLAPPED Overlapped {};
-    IOType Type {};
+    OVERLAPPED Overlapped{};
+    IOType Type{};
 };
 
 class Session final
 {
 public:
     const SOCKET Socket;
+    const size_t SessionId;
     const size_t BufferCapacity;
 
     OverlappedEx IOContext_Receive;
     OverlappedEx IOContext_Send;
 
-    explicit Session(SOCKET socket);
+    explicit Session(SOCKET socket, size_t sessionId);
 
     ~Session();
 
@@ -43,8 +44,8 @@ public:
 
     void PostReceive(size_t bytesTransferred);
 
-    template<typename TCtsHandler>
-    bool TryPopMessage(TCtsHandler& handler)
+    template<typename TPushHandler, typename TOnFailedHandler>
+    bool TryPopMessage(const TPushHandler& pushHandler, const TOnFailedHandler& onFailedHandler)
     {
         using namespace RatkiniaProtocol;
 
@@ -56,11 +57,19 @@ public:
 
         MessageHeader header{};
         const auto receiveBufferBegin_beforeHeader = receiveBufferBegin_;
-        const auto primaryHeaderSize = std::min<size_t>(MessageHeaderSize, BufferCapacity - receiveBufferBegin_beforeHeader);
+        const auto primaryHeaderSize = std::min<size_t>(MessageHeaderSize,
+                                                        BufferCapacity
+                                                        - receiveBufferBegin_beforeHeader);
         const auto secondaryHeaderSize = MessageHeaderSize - primaryHeaderSize;
 
-        memcpy_s(&header, primaryHeaderSize, receiveBuffer_.get() + receiveBufferBegin_beforeHeader, primaryHeaderSize);
-        memcpy_s(reinterpret_cast<char*>(&header) + primaryHeaderSize, secondaryHeaderSize, receiveBuffer_.get(), secondaryHeaderSize);
+        memcpy_s(&header,
+                 primaryHeaderSize,
+                 receiveBuffer_.get() + receiveBufferBegin_beforeHeader,
+                 primaryHeaderSize);
+        memcpy_s(reinterpret_cast<char*>(&header) + primaryHeaderSize,
+                 secondaryHeaderSize,
+                 receiveBuffer_.get(),
+                 secondaryHeaderSize);
         header.MessageType = ntohs(header.MessageType);
         header.BodyLength = ntohs(header.BodyLength);
 
@@ -70,19 +79,40 @@ public:
             return false;
         }
 
-        const auto receiveBufferBegin_afterHeader = (receiveBufferBegin_beforeHeader + MessageHeaderSize) % BufferCapacity;
-        const auto primaryBodySize = std::min<size_t>(header.BodyLength, BufferCapacity - receiveBufferBegin_afterHeader);
+        const auto receiveBufferBegin_afterHeader = (receiveBufferBegin_beforeHeader
+                                                     + MessageHeaderSize) % BufferCapacity;
+        const auto primaryBodySize = std::min<size_t>(header.BodyLength,
+                                                      BufferCapacity
+                                                      - receiveBufferBegin_afterHeader);
         const auto secondaryBodySize = header.BodyLength - primaryBodySize;
 
         if (primaryBodySize == header.BodyLength)
         {
-            handler.HandleCtsMessage(header.MessageType, header.BodyLength, receiveBuffer_.get() + receiveBufferBegin_afterHeader);
+            if (pushHandler(SessionId,
+                            header.MessageType,
+                            header.BodyLength,
+                            receiveBuffer_.get() + receiveBufferBegin_afterHeader))
+            {
+                onFailedHandler(SessionId);
+            }
         }
         else
         {
-            memcpy_s(receiveTempBuffer_.get(), primaryBodySize, receiveBuffer_.get() + receiveBufferBegin_afterHeader, primaryBodySize);
-            memcpy_s(receiveTempBuffer_.get() + primaryBodySize, secondaryBodySize, receiveBuffer_.get(), secondaryBodySize);
-            handler.HandleCtsMessage(header.MessageType, header.BodyLength, receiveTempBuffer_.get());
+            memcpy_s(receiveTempBuffer_.get(),
+                     primaryBodySize,
+                     receiveBuffer_.get() + receiveBufferBegin_afterHeader,
+                     primaryBodySize);
+            memcpy_s(receiveTempBuffer_.get() + primaryBodySize,
+                     secondaryBodySize,
+                     receiveBuffer_.get(),
+                     secondaryBodySize);
+            if (!pushHandler(SessionId,
+                             header.MessageType,
+                             header.BodyLength,
+                             receiveTempBuffer_.get()))
+            {
+                onFailedHandler(SessionId);
+            }
         }
 
         receiveBufferBegin_ = (receiveBufferBegin_afterHeader + header.BodyLength) % BufferCapacity;

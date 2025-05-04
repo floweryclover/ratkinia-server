@@ -5,14 +5,36 @@
 #include "NetworkServer.h"
 #include "MainServer.h"
 #include "MessagePrinter.h"
+#include "MpscMessageQueue.h"
 #include "Errors.h"
 #include "google/protobuf/message_lite.h"
 #include <MSWSock.h>
 
 using namespace RatkiniaServer;
 
-NetworkServer::NetworkServer(MainServer& mainServer)
+struct MessageQueuePushFunctor
+{
+    MpscMessageQueue& MessageQueue;
+
+    bool operator()(uint64_t sessionId, uint16_t messageType, uint16_t bodySize, const char* body) const
+    {
+        return MessageQueue.Push(sessionId, messageType, bodySize, body);
+    }
+};
+
+struct OnFailedFunctor
+{
+    NetworkServer& NetworkServer;
+
+    void operator()(uint64_t sessionId) const
+    {
+        NetworkServer.OnMessagePushFailed(sessionId);
+    }
+};
+
+NetworkServer::NetworkServer(MainServer& mainServer, MpscMessageQueue& messageQueue)
     : mainServer_{ mainServer },
+      messageQueue_{ messageQueue },
       listenSocket_{ INVALID_SOCKET },
       iocpHandle_{ nullptr },
       newSessionId_{ 0 }
@@ -229,7 +251,7 @@ bool NetworkServer::AcceptAsync()
 
     auto [iter, result] = sessions_.emplace(std::piecewise_construct,
                                             std::forward_as_tuple(newSessionId_),
-                                            std::forward_as_tuple(clientSocket, SessionBufferSize));
+                                            std::forward_as_tuple(clientSocket, newSessionId_));
     auto& session = iter->second;
     if (nullptr
         == CreateIoCompletionPort(reinterpret_cast<HANDLE>(clientSocket),
@@ -262,13 +284,12 @@ void NetworkServer::PostAccept(Session& session)
 void NetworkServer::PostReceive(Session& session, const size_t bytesTransferred)
 {
     session.PostReceive(bytesTransferred);
-    while (session.TryPopMessage(*this));
+    while (session.TryPopMessage(MessageQueuePushFunctor{ messageQueue_ },
+                                 OnFailedFunctor{ *this }));
 }
 
-void NetworkServer::HandleCtsMessage(uint16_t messageType,
-                                     uint16_t messageBodyLength,
-                                     const char* bodyBuffer)
+void NetworkServer::OnMessagePushFailed(size_t sessionId)
 {
-IMessageFilter
+    sessions_.erase(sessionId);
 }
 

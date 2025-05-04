@@ -1,7 +1,9 @@
-#ifndef RATKINIAPROTOCOL__H
-#define RATKINIAPROTOCOL__H
+#ifndef RATKINIAPROTOCOL_H
+#define RATKINIAPROTOCOL_H
 
 #include <cstdint>
+
+// #define CASE(x) case static_cast<int>(x)
 
 namespace RatkiniaProtocol
 {

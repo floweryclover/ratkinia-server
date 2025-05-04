@@ -4,7 +4,8 @@ project(RatkiniaServer)
 set(CMAKE_CXX_STANDARD 20)
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/Sources/*.hpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/Sources/*.cpp")
+        "${CMAKE_CURRENT_SOURCE_DIR}/Sources/*.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Sources/*.cc")
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 

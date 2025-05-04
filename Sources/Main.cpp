@@ -1,5 +1,6 @@
 ﻿#include "NetworkServer.h"
 #include "MainServer.h"
+#include "MpscMessageQueue.h"
 #include <iostream>
 #include <WinSock2.h>
 
@@ -17,7 +18,8 @@ int main()
 
     MainServer mainServer;
 
-    NetworkServer networkServer{ mainServer };
+    MpscMessageQueue queue;
+    NetworkServer networkServer{ mainServer, queue };
     networkServer.Start("127.0.0.1", 31415);
 
     SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);

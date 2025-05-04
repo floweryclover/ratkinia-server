@@ -8,8 +8,9 @@
 #include <WS2tcpip.h>
 #include <mswsock.h>
 
-Session::Session(const SOCKET socket)
+Session::Session(const SOCKET socket, const size_t sessionId)
     : Socket{ socket },
+      SessionId{ sessionId },
       BufferCapacity{ RatkiniaProtocol::MessageMaxSize * 128 },
       receiveTempBuffer_{ std::make_unique<char[]>(RatkiniaProtocol::MessageMaxSize) },
       receiveBuffer_{ std::make_unique<char[]>(BufferCapacity) },
