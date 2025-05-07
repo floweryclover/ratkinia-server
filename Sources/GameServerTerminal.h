@@ -11,20 +11,57 @@
 #include <array>
 #include <shared_mutex>
 
-template<typename T>
-struct Sender
-{
+class GameServerTerminal;
 
+template<typename TPipe>
+class Sender final
+{
+public:
+    explicit Sender(std::shared_ptr<TPipe> pipe)
+        : pipe_{std::move(pipe)}
+    {}
+
+    template<typename TMessage>
+    bool Send(TMessage&& message)
+    {
+
+    }
+
+private:
+    const std::shared_ptr<TPipe> pipe_;
+    const std::shared_ptr<std::atomic_flag> flag_;
 };
 
-template<typename T>
-struct Receiver
+template<typename TPipe>
+class Receiver final
 {
+public:
+    explicit Receiver(std::shared_ptr<TPipe> pipe)
+        : pipe_{std::move(pipe)}
+    {}
 
+    void Wait() const
+    {
+        flag_->wait(false, std::memory_order_acquire);
+    }
+
+    template<typename TMessage>
+    bool TryReceive(TMessage& outMessage)
+    {
+
+    }
+
+private:
+    const std::shared_ptr<TPipe> pipe_;
+    const std::shared_ptr<std::atomic_flag> flag_;
 };
 
-template<typename T>
-std::pair<Sender<T>, Receiver<T>> Create
+template<typename T, typename... TArgs>
+std::pair<Sender<T>, Receiver<T>> CreateChannel(TArgs&& ...args)
+{
+    auto terminal = std::make_shared<T>(std::forward<TArgs>(args)...);
+    return { terminal, std::move(terminal) };
+}
 
 class GameServerTerminal final
 {
