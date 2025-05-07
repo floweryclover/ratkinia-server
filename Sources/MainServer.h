@@ -8,21 +8,18 @@
 #include <string>
 #include <mutex>
 
-namespace RatkiniaServer
+class MainServer final
 {
-    class MainServer final
-    {
-    public:
-        explicit MainServer();
+public:
+    explicit MainServer();
 
-        void Run();
+    void Run();
 
-        void RequestTerminate();
+    void RequestTerminate();
 
-    private:
-        std::mutex terminateOperationMutex_;
-        bool shouldTerminate_;
-    };
-}
+private:
+    std::mutex terminateOperationMutex_;
+    bool shouldTerminate_;
+};
 
 #endif //MAINSERVER_H

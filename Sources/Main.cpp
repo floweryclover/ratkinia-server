@@ -1,10 +1,10 @@
 ﻿#include "NetworkServer.h"
 #include "MainServer.h"
-#include "MpscMessageQueue.h"
+#include "GameServer.h"
+#include "GameServerTerminal.h"
+#include "NetworkServerTerminal.h"
 #include <iostream>
 #include <WinSock2.h>
-
-using namespace RatkiniaServer;
 
 int main()
 {
@@ -18,15 +18,15 @@ int main()
 
     MainServer mainServer;
 
-    MpscMessageQueue queue;
+    NetworkServerTerminal networkServerTerminal;
+
+
+    GameServer gameServer{ mainServer, gameServer };
+    gameServer.Start();
+
+    GameServerTerminal queue;
     NetworkServer networkServer{ mainServer, queue };
     networkServer.Start("127.0.0.1", 31415);
-
-    SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    SOCKADDR_IN  sockaddrIn {};
-    inet_pton(AF_INET, "127.0.0.1", &sockaddrIn.sin_addr);
-    sockaddrIn.sin_family =AF_INET;
-    sockaddrIn.sin_port = htons(31415);
 
     mainServer.Run();
 

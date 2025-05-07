@@ -5,7 +5,7 @@
 #ifndef RATKINIASERVER_SESSION_H
 #define RATKINIASERVER_SESSION_H
 
-#include "RatkiniaProtocol.h"
+#include "RatkiniaProtocol.gen.h"
 #include <WinSock2.h>
 #include <memory>
 
@@ -38,14 +38,13 @@ public:
 
     bool AcceptAsync(SOCKET listenSocket, LPOVERLAPPED acceptOverlapped);
 
-    void PostAccept();
+    bool PostAccept(HANDLE iocpHandle);
 
     bool ReceiveAsync();
 
     void PostReceive(size_t bytesTransferred);
 
-    template<typename TPushHandler, typename TOnFailedHandler>
-    bool TryPopMessage(const TPushHandler& pushHandler, const TOnFailedHandler& onFailedHandler)
+    bool TryPopMessage(auto&& push, auto&& onFailed)
     {
         using namespace RatkiniaProtocol;
 
@@ -88,12 +87,12 @@ public:
 
         if (primaryBodySize == header.BodyLength)
         {
-            if (pushHandler(SessionId,
+            if (!push(SessionId,
                             header.MessageType,
                             header.BodyLength,
                             receiveBuffer_.get() + receiveBufferBegin_afterHeader))
             {
-                onFailedHandler(SessionId);
+                onFailed(SessionId);
             }
         }
         else
@@ -106,12 +105,12 @@ public:
                      secondaryBodySize,
                      receiveBuffer_.get(),
                      secondaryBodySize);
-            if (!pushHandler(SessionId,
+            if (!push(SessionId,
                              header.MessageType,
                              header.BodyLength,
                              receiveTempBuffer_.get()))
             {
-                onFailedHandler(SessionId);
+                onFailed(SessionId);
             }
         }
 

@@ -2,8 +2,8 @@
 // Created by floweryclover on 2025-03-31.
 //
 
-#ifndef IOSERVER_H
-#define IOSERVER_H
+#ifndef NETWORKSERVER_H
+#define NETWORKSERVER_H
 
 #include "Session.h"
 #include <ws2tcpip.h>
@@ -15,54 +15,64 @@
 #include <memory>
 #include <unordered_map>
 
-class MpscMessageQueue;
+class GameServer;
 
-namespace RatkiniaServer
+class MainServer;
+
+class NetworkServerTerminal;
+
+class GameServerTerminal;
+
+class NetworkServer final
 {
-    class MainServer;
+public:
+    explicit NetworkServer(MainServer& mainServer,
+                           NetworkServerTerminal& networkServerTerminal,
+                           GameServerTerminal& gameServerTerminal);
 
-    class NetworkServer final
+    ~NetworkServer();
+
+    void Start(const std::string& listenAddress, unsigned short listenPort);
+
+    void DisconnectSession(uint64_t session);
+
+private:
+    static constexpr uint64_t NullSessionId = 0xffffffffffffffff;
+    struct AcceptContext final
     {
-    public:
-        explicit NetworkServer(MainServer& mainServer, MpscMessageQueue& messageQueue);
-
-        ~NetworkServer();
-
-        void Start(const std::string& listenAddress, unsigned short listenPort);
-
-        void OnMessagePushFailed(size_t sessionId);
-
-    private:
-        static constexpr uint64_t NullSessionId = 0xffffffffffffffff;
-        struct AcceptContext final
-        {
-            OverlappedEx Context {};
-            uint64_t SessionId {};
-        };
-
-        static constexpr int AcceptPoolSize = 8;
-        static constexpr size_t SessionBufferSize = 1024;
-
-        MainServer& mainServer_;
-        MpscMessageQueue& messageQueue_;
-
-        SOCKET listenSocket_;
-        HANDLE iocpHandle_;
-        std::vector<std::thread> workerThreads_;
-        std::atomic_bool shouldStop_;
-
-        uint64_t newSessionId_;
-        std::unordered_map<uint64_t, Session> sessions_;
-        std::unique_ptr<AcceptContext[]> acceptContexts_;
-
-        void WorkerThreadBody(int threadId);
-
-        bool AcceptAsync();
-
-        void PostAccept(Session& session);
-
-        void PostReceive(Session& session, size_t bytesTransferred);
+        OverlappedEx Context{};
+        uint64_t SessionId{};
     };
-}
 
-#endif //IOSERVER_H
+    static constexpr int AcceptPoolSize = 8;
+    static constexpr size_t SessionBufferSize = 1024;
+
+    MainServer& mainServer_;
+    NetworkServerTerminal& networkServerTerminal_;
+    GameServerTerminal& gameServerTerminal_;
+
+    SOCKET listenSocket_;
+    HANDLE iocpHandle_;
+    std::atomic_bool shouldStop_;
+
+    uint64_t newSessionId_;
+    std::unordered_map<uint64_t, Session> sessions_;
+    std::unique_ptr<AcceptContext[]> acceptContexts_;
+
+    std::vector<std::thread> workerThreads_;
+    std::thread terminalObserverThread_;
+
+    void WorkerThreadBody(int threadId);
+
+    void TerminalObserverThreadBody();
+
+    bool AcceptAsync();
+
+    void PostAccept(Session& session);
+
+    void PostReceive(Session& session, size_t bytesTransferred);
+
+    void OnMessagePushFailed(size_t sessionId);
+};
+
+#endif //NETWORKSERVER_H

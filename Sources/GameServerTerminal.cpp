@@ -2,12 +2,19 @@
 // Created by floweryclover on 2025-04-28.
 //
 
-#include "MpscMessageQueue.h"
+#include "GameServerTerminal.h"
+#include "MessagePrinter.h"
 
-bool MpscMessageQueue::Push(uint64_t sessionId,
-                            uint16_t messageType,
-                            uint16_t messageBodySize,
-                            const char* messageBody)
+GameServerTerminal::GameServerTerminal()
+    : currentPushIndex_{ 0 }
+{
+
+}
+
+bool GameServerTerminal::PushMessage(uint64_t sessionId,
+                                     uint16_t messageType,
+                                     uint16_t messageBodySize,
+                                     const char* messageBody)
 {
     int poolIndex;
     size_t allocateSize;
@@ -30,7 +37,7 @@ bool MpscMessageQueue::Push(uint64_t sessionId,
         if (pool.empty())
         {
             const auto beforePoolSize = pool.size();
-            for (int i = 0; i < beforePoolSize; ++i)
+            for (int i = 0; i < beforePoolSize+1; ++i)
             {
                 pool.emplace_back(std::make_unique<char[]>(allocateSize));
             }
@@ -49,7 +56,7 @@ bool MpscMessageQueue::Push(uint64_t sessionId,
     return true;
 }
 
-void MpscMessageQueue::Pop()
+void GameServerTerminal::PopMessage()
 {
     auto& popQueue = queues_[1 - currentPushIndex_];
 
@@ -67,7 +74,7 @@ void MpscMessageQueue::Pop()
     popQueue.pop();
 }
 
-void MpscMessageQueue::Swap()
+void GameServerTerminal::SwapQueue()
 {
     std::unique_lock lock{ mutex_ };
     currentPushIndex_ = 1 - currentPushIndex_;

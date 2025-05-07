@@ -21,6 +21,8 @@ Session::Session(const SOCKET socket, const size_t sessionId)
       sendBufferBegin_{ 0 },
       sendBufferEnd_{ 0 }
 {
+    ZeroMemory(&IOContext_Receive, sizeof(IOContext_Receive));
+    ZeroMemory(&IOContext_Send, sizeof(IOContext_Send));
 }
 
 Session::~Session()
@@ -29,8 +31,18 @@ Session::~Session()
     closesocket(Socket);
 }
 
-void Session::PostAccept()
+bool Session::PostAccept(const HANDLE iocpHandle)
 {
+    if (nullptr
+        == CreateIoCompletionPort(reinterpret_cast<HANDLE>(Socket),
+                                  iocpHandle,
+                                  reinterpret_cast<ULONG_PTR>(this),
+                                  0))
+    {
+        ERR_PRINT_VARARGS("생성한 ClientSocket의 IOCP 핸들로의 연결 작업에 실패했습니다:", GetLastError());
+        return false;
+    }
+
     SOCKADDR_IN* localAddr;
     SOCKADDR_IN* remoteAddr;
     int localAddrLen;
@@ -54,6 +66,8 @@ void Session::PostAccept()
     {
         MessagePrinter::WriteLine(buf, "접속");
     }
+
+    return true;
 }
 
 bool Session::AcceptAsync(const SOCKET listenSocket, LPOVERLAPPED acceptOverlapped)
@@ -83,7 +97,10 @@ bool Session::ReceiveAsync()
 {
     WSABUF wsabuf{};
     wsabuf.buf = receiveBuffer_.get() + receiveBufferBegin_;
-    wsabuf.len = BufferCapacity - receiveBufferSize_;
+    wsabuf.len = BufferCapacity - receiveBufferBegin_;
+
+    IOContext_Receive.Type = IOType::Receive;
+
     DWORD dwFlags = 0;
     if (0
         != WSARecv(Socket,

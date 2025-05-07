@@ -3,15 +3,18 @@
 //
 
 #include "GameServer.h"
+#include "MainServer.h"
 #include "Errors.h"
-#include "CTS.pb.h"
-#include "MpscMessageQueue.h"
+#include "GameServerTerminal.h"
 
-GameServer::GameServer(MpscMessageQueue& messageQueue)
-    : messageQueue_{ messageQueue }
+GameServer::GameServer(MainServer& mainServer)
+    : mainServer_{ mainServer },
+      messageQueue_{},
+      ctsHandler_{ *this }
 {
-
 }
+
+GameServer::~GameServer() = default;
 
 void GameServer::Start()
 {
@@ -24,39 +27,29 @@ void GameServer::ThreadBody()
 {
     while (true)
     {
+        messageQueue_.SwapQueue();
+
         uint64_t sessionId;
         uint16_t messageType;
         uint16_t bodySize;
         const char* body;
 
-        while (messageQueue_.TryPeek(sessionId, messageType, bodySize, body))
+        while (messageQueue_.TryPeekMessage(sessionId, messageType, bodySize, body))
         {
-            HandleMessage(sessionId, messageType, bodySize, body);
-
-            messageQueue_.Pop();
+            ctsHandler_.HandleCts(sessionId, messageType, bodySize, body);
+            messageQueue_.PopMessage();
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 }
 
-void GameServer::HandleMessage(uint64_t sessionId,
-                               uint16_t messageType,
-                               uint16_t bodySize,
-                               const char* body)
+void GameServer::DisconnectSession(uint64_t session)
 {
-    using namespace RatkiniaProtocol::Cts;
 
-    switch (messageType)
-    {
-        case static_cast<int>(MessageType::LoginRequest):
-        {
-            LoginRequest loginRequest;
-            loginRequest.ParseFromArray(body, bodySize);
-        }
-        default:
-        {
-            ERR_PRINT_VARARGS("처리되지 않은 메시지:", messageType);
-            break;
-        }
-    }
 }
+
+void GameServer::Terminate()
+{
+    mainServer_.RequestTerminate();
+}
+

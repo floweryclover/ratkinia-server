@@ -1,45 +1,29 @@
-﻿//
+//
 // Created by floweryclover on 2025-03-31.
 //
 
 #include "NetworkServer.h"
 #include "MainServer.h"
+#include "GameServer.h"
 #include "MessagePrinter.h"
-#include "MpscMessageQueue.h"
+#include "GameServerTerminal.h"
+#include "NetworkServerTerminal.h"
 #include "Errors.h"
 #include "google/protobuf/message_lite.h"
 #include <MSWSock.h>
 
-using namespace RatkiniaServer;
-
-struct MessageQueuePushFunctor
-{
-    MpscMessageQueue& MessageQueue;
-
-    bool operator()(uint64_t sessionId, uint16_t messageType, uint16_t bodySize, const char* body) const
-    {
-        return MessageQueue.Push(sessionId, messageType, bodySize, body);
-    }
-};
-
-struct OnFailedFunctor
-{
-    NetworkServer& NetworkServer;
-
-    void operator()(uint64_t sessionId) const
-    {
-        NetworkServer.OnMessagePushFailed(sessionId);
-    }
-};
-
-NetworkServer::NetworkServer(MainServer& mainServer, MpscMessageQueue& messageQueue)
+NetworkServer::NetworkServer(MainServer& mainServer,
+                             NetworkServerTerminal& networkServerTerminal,
+                             GameServerTerminal& gameServerTerminal)
     : mainServer_{ mainServer },
-      messageQueue_{ messageQueue },
+      networkServerTerminal_{ networkServerTerminal },
+      gameServerTerminal_{ gameServerTerminal },
       listenSocket_{ INVALID_SOCKET },
       iocpHandle_{ nullptr },
-      newSessionId_{ 0 }
+      newSessionId_{ 0 },
+      acceptContexts_{ std::make_unique<AcceptContext[]>(AcceptPoolSize) }
 {
-    acceptContexts_ = std::make_unique<AcceptContext[]>(AcceptPoolSize);
+
 }
 
 NetworkServer::~NetworkServer()
@@ -120,7 +104,17 @@ void NetworkServer::Start(const std::string& listenAddress, unsigned short liste
                                    reinterpret_cast<char*>(&option),
                                    sizeof(option)))
     {
-        ERR_PRINT_VARARGS("리슨 소켓 옵션 설정에 실패하였습니다:", WSAGetLastError());
+        ERR_PRINT_VARARGS("리슨 소켓 SO_REUSEADDR 설정에 실패하였습니다:", WSAGetLastError());
+        mainServer_.RequestTerminate();
+        return;
+    }
+    if (SOCKET_ERROR == setsockopt(listenSocket_,
+                                   IPPROTO_TCP,
+                                   TCP_NODELAY,
+                                   reinterpret_cast<char*>(&option),
+                                   sizeof(option)))
+    {
+        ERR_PRINT_VARARGS("리슨 소켓 TCP_NODELAY 설정에 실패하였습니다:", WSAGetLastError());
         mainServer_.RequestTerminate();
         return;
     }
@@ -141,6 +135,7 @@ void NetworkServer::Start(const std::string& listenAddress, unsigned short liste
 
     for (int i = 0; i < AcceptPoolSize; ++i)
     {
+        acceptContexts_[i].SessionId = NullSessionId;
         if (!AcceptAsync())
         {
             mainServer_.RequestTerminate();
@@ -166,6 +161,7 @@ void NetworkServer::WorkerThreadBody(const int threadId)
             MessagePrinter::WriteErrorLine("Error", GetLastError());
             if (completionKey != 0) // 타임아웃 외 오류
             {
+                MessagePrinter::WriteLine("IOCP 워커 스레드", threadId, "GQCS() 에러:", GetLastError());
                 const OverlappedEx& context = *reinterpret_cast<OverlappedEx*>(overlapped);
                 if (context.Type == IOType::Accept)
                 {
@@ -177,6 +173,7 @@ void NetworkServer::WorkerThreadBody(const int threadId)
                                       "Session Id:",
                                       acceptContext.SessionId);
                     sessions_.erase(acceptContext.SessionId);
+                    acceptContext.SessionId = NullSessionId;
                     if (!AcceptAsync())
                     {
                         mainServer_.RequestTerminate();
@@ -184,7 +181,6 @@ void NetworkServer::WorkerThreadBody(const int threadId)
                     }
                     continue;
                 }
-                MessagePrinter::WriteLine("IOCP 워커 스레드", threadId, "GQCS() 에러:", GetLastError());
             }
             continue;
         }
@@ -212,6 +208,11 @@ void NetworkServer::WorkerThreadBody(const int threadId)
             MessagePrinter::WriteLine("Send");
         }
     }
+}
+
+void NetworkServer::TerminalObserverThreadBody()
+{
+    while (!shou)
 }
 
 bool NetworkServer::AcceptAsync()
@@ -253,19 +254,8 @@ bool NetworkServer::AcceptAsync()
                                             std::forward_as_tuple(newSessionId_),
                                             std::forward_as_tuple(clientSocket, newSessionId_));
     auto& session = iter->second;
-    if (nullptr
-        == CreateIoCompletionPort(reinterpret_cast<HANDLE>(clientSocket),
-                                  iocpHandle_,
-                                  reinterpret_cast<ULONG_PTR>(&session),
-                                  0))
-    {
-        ERR_PRINT_VARARGS("생성한 ClientSocket의 IOCP 핸들로의 연결 작업에 실패했습니다:", GetLastError());
-        acceptContext->SessionId = NullSessionId;
-        sessions_.erase(sessionId);
-        return false;
-    }
 
-    if (!session.AcceptAsync(listenSocket_, reinterpret_cast<LPOVERLAPPED>(&acceptContext)))
+    if (!session.AcceptAsync(listenSocket_, reinterpret_cast<LPOVERLAPPED>(acceptContext)))
     {
         acceptContext->SessionId = NullSessionId;
         sessions_.erase(sessionId);
@@ -277,19 +267,46 @@ bool NetworkServer::AcceptAsync()
 
 void NetworkServer::PostAccept(Session& session)
 {
-    session.PostAccept();
-    session.ReceiveAsync();
+    if (!session.PostAccept(iocpHandle_))
+    {
+        sessions_.erase(session.SessionId);
+        return;
+    }
+    if (!session.ReceiveAsync())
+    {
+        sessions_.erase(session.SessionId);
+    }
 }
 
 void NetworkServer::PostReceive(Session& session, const size_t bytesTransferred)
 {
     session.PostReceive(bytesTransferred);
-    while (session.TryPopMessage(MessageQueuePushFunctor{ messageQueue_ },
-                                 OnFailedFunctor{ *this }));
+    while (session.TryPopMessage([this](auto sessionId, auto messageType, auto bodySize, auto body)
+                                 {
+                                     return gameServer_.PushMessage(sessionId,
+                                                                    messageType,
+                                                                    bodySize,
+                                                                    body);
+                                 },
+                                 [this](auto sessionId)
+                                 {
+                                     OnMessagePushFailed(sessionId);
+                                 }));
+    if (!session.ReceiveAsync())
+    {
+        sessions_.erase(session.SessionId);
+    }
 }
 
 void NetworkServer::OnMessagePushFailed(size_t sessionId)
 {
+    MessagePrinter::WriteErrorLine("NetworkServer -> GameServer 메시지 큐 Push에 실패하였습니다:", sessionId);
     sessions_.erase(sessionId);
 }
+
+void NetworkServer::DisconnectSession(uint64_t session)
+{
+
+}
+
 

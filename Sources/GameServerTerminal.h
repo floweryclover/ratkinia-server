@@ -2,29 +2,46 @@
 // Created by floweryclover on 2025-04-28.
 //
 
-#ifndef RATKINIASERVER_MPSCMESSAGEQUEUE_H
-#define RATKINIASERVER_MPSCMESSAGEQUEUE_H
+#ifndef RATKINIASERVER_GAMESERVERTERMINAL_H
+#define RATKINIASERVER_GAMESERVERTERMINAL_H
 
-#include "RatkiniaProtocol.h"
+#include "RatkiniaProtocol.gen.h"
 #include <memory>
 #include <queue>
 #include <array>
 #include <shared_mutex>
 
-class MpscMessageQueue final
+template<typename T>
+struct Sender
+{
+
+};
+
+template<typename T>
+struct Receiver
+{
+
+};
+
+template<typename T>
+std::pair<Sender<T>, Receiver<T>> Create
+
+class GameServerTerminal final
 {
 public:
-    bool Push(uint64_t sessionId,
-              uint16_t messageType,
-              uint16_t messageBodySize,
-              const char* messageBody);
+    explicit GameServerTerminal();
+
+    bool PushMessage(uint64_t sessionId,
+                     uint16_t messageType,
+                     uint16_t messageBodySize,
+                     const char* messageBody);
 
     /**
      * 소비자 스레드에서 호출.
      * @return
      */
      [[nodiscard]]
-    __forceinline bool TryPeek(uint64_t& outSessionId, uint16_t& outMessageType, uint16_t& outMessageBodySize, const char*& outMessageBody) const
+    __forceinline bool TryPeekMessage(uint64_t& outSessionId, uint16_t& outMessageType, uint16_t& outMessageBodySize, const char*& outMessageBody) const
     {
         auto& popQueue = queues_[1 - currentPushIndex_];
         if (popQueue.empty())
@@ -44,22 +61,22 @@ public:
     /**
      * 소비자 스레드에서 호출.
      */
-    void Pop();
+    void PopMessage();
 
     /**
      * 소비자 스레드에서 호출.
      */
-    void Swap();
+    void SwapQueue();
 
 private:
     static constexpr int PoolIndex_1_16 = 0;
-    static constexpr int PoolIndex_17_32 = 0;
-    static constexpr int PoolIndex_33_64 = 1;
-    static constexpr int PoolIndex_65_128 = 2;
-    static constexpr int PoolIndex_129_256 = 3;
-    static constexpr int PoolIndex_257_512 = 4;
-    static constexpr int PoolIndex_513_1024 = 5;
-    static constexpr int PoolIndex_1025_MaxMessageBodySize = 6;
+    static constexpr int PoolIndex_17_32 = 1;
+    static constexpr int PoolIndex_33_64 = 2;
+    static constexpr int PoolIndex_65_128 = 3;
+    static constexpr int PoolIndex_129_256 = 4;
+    static constexpr int PoolIndex_257_512 = 5;
+    static constexpr int PoolIndex_513_1024 = 6;
+    static constexpr int PoolIndex_1025_MaxMessageBodySize = 7;
 
     struct Message
     {
@@ -70,7 +87,7 @@ private:
     };
     int currentPushIndex_;
 
-    std::array<std::array<std::vector<std::unique_ptr<char[]>>, 7>, 2> pools_;
+    std::array<std::array<std::vector<std::unique_ptr<char[]>>, 8>, 2> pools_;
     std::queue<Message> queues_[2];
     std::shared_mutex mutex_;
     std::mutex producerMutex_;
@@ -128,4 +145,4 @@ private:
     }
 };
 
-#endif //RATKINIASERVER_MPSCMESSAGEQUEUE_H
+#endif //RATKINIASERVER_GAMESERVERTERMINAL_H

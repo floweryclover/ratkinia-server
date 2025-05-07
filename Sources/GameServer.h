@@ -5,26 +5,43 @@
 #ifndef RATKINIASERVER_GAMESERVER_H
 #define RATKINIASERVER_GAMESERVER_H
 
+#include "CtsHandler.h"
+#include "GameServerTerminal.h"
 #include <thread>
+#include <memory>
 
-class MpscMessageQueue;
+class MainServer;
+
+class CtsHandler;
 
 class GameServer final
 {
-    static constexpr auto A = [](){};
 public:
-    explicit GameServer(MpscMessageQueue& messageQueue);
+    explicit GameServer(MainServer& mainServer);
+
+    ~GameServer();
 
     void Start();
 
+    void DisconnectSession(uint64_t session);
+
+    void Terminate();
+
+    __forceinline bool PushMessage(uint64_t session, uint16_t messageType, uint16_t bodySize, const char* body)
+    {
+        return messageQueue_.PushMessage(session, messageType, bodySize, body);
+    }
+
 private:
-    MpscMessageQueue& messageQueue_;
+    MainServer& mainServer_;
+
+    GameServerTerminal messageQueue_;
+
+    CtsHandler ctsHandler_;
 
     std::thread thread_;
 
     void ThreadBody();
-
-    void HandleMessage(uint64_t sessionId, uint16_t messageType, uint16_t bodySize, const char* body);
 };
 
 

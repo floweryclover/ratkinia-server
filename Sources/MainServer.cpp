@@ -4,8 +4,6 @@
 
 #include "MainServer.h"
 
-using namespace RatkiniaServer;
-
 MainServer::MainServer()
     : shouldTerminate_{ false }
 {
