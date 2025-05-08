@@ -2,16 +2,16 @@
 // Created by floweryclover on 2025-04-28.
 //
 
-#include "GameServerTerminal.h"
+#include "GameServerMessageQueue.h"
 #include "MessagePrinter.h"
 
-GameServerTerminal::GameServerTerminal()
+GameServerMessageQueue::GameServerMessageQueue()
     : currentPushIndex_{ 0 }
 {
 
 }
 
-bool GameServerTerminal::PushMessage(uint64_t sessionId,
+bool GameServerMessageQueue::Push(uint64_t sessionId,
                                      uint16_t messageType,
                                      uint16_t messageBodySize,
                                      const char* messageBody)
@@ -56,7 +56,7 @@ bool GameServerTerminal::PushMessage(uint64_t sessionId,
     return true;
 }
 
-void GameServerTerminal::PopMessage()
+void GameServerMessageQueue::Pop()
 {
     auto& popQueue = queues_[1 - currentPushIndex_];
 
@@ -72,9 +72,14 @@ void GameServerTerminal::PopMessage()
     auto& pool = pools_[1 - currentPushIndex_][poolIndex];
     pool.emplace_back(std::move(popQueue.front().MessageBody));
     popQueue.pop();
+
+    if (popQueue.empty())
+    {
+        Swap();
+    }
 }
 
-void GameServerTerminal::SwapQueue()
+void GameServerMessageQueue::Swap()
 {
     std::unique_lock lock{ mutex_ };
     currentPushIndex_ = 1 - currentPushIndex_;

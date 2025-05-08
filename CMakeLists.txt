@@ -11,7 +11,7 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 
 set(CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/Thirdparty")
 
-find_package(protobuf CONFIG REQUIRED)
+#find_package(protobuf CONFIG REQUIRED)
 find_package(OpenSSL CONFIG REQUIRED)
 find_package(libpqxx CONFIG REQUIRED)
 
@@ -22,7 +22,7 @@ target_link_libraries(${PROJECT_NAME}
         PRIVATE
         ws2_32
         mswsock
-        protobuf::libprotobuf-lite
+        #protobuf::libprotobuf-lite
         OpenSSL::SSL
         OpenSSL::Crypto
         libpqxx::pqxx)

@@ -13,72 +13,106 @@
 
 class GameServerTerminal;
 
-template<typename TPipe>
+template <typename TPipe>
 class Sender final
 {
 public:
-    explicit Sender(std::shared_ptr<TPipe> pipe)
-        : pipe_{std::move(pipe)}
-    {}
+    explicit Sender(std::shared_ptr<TPipe> pipe,
+                    std::shared_ptr<std::atomic_int> counter,
+                    std::shared_ptr<std::atomic_bool> closed)
+        : pipe_{std::move(pipe)},
+          counter_{std::move(counter)},
+          closed_{std::move(closed)}
+    {
+    }
 
-    template<typename TMessage>
+    ~Sender()
+    {
+    }
+
+    template <typename TMessage>
     bool Send(TMessage&& message)
     {
-
     }
 
 private:
     const std::shared_ptr<TPipe> pipe_;
-    const std::shared_ptr<std::atomic_flag> flag_;
+    const std::shared_ptr<std::atomic_int> counter_; // 값 변경에 대한 의미만 가지며, 값 자체는 의미 없음
+    const std::shared_ptr<std::atomic_bool> closed_;
 };
 
-template<typename TPipe>
+template <typename TPipe>
 class Receiver final
 {
 public:
-    explicit Receiver(std::shared_ptr<TPipe> pipe)
-        : pipe_{std::move(pipe)}
-    {}
+    using TMessage = TPipe::TMessage;
 
-    void Wait() const
+    explicit Receiver(std::shared_ptr<TPipe> pipe,
+                      std::shared_ptr<std::atomic_int> counter,
+                      std::shared_ptr<std::atomic_bool> closed)
+        : pipe_{std::move(pipe)},
+          counter_{std::move(counter)},
+          closed_{std::move(closed)}
     {
-        flag_->wait(false, std::memory_order_acquire);
     }
 
-    template<typename TMessage>
-    bool TryReceive(TMessage& outMessage)
+    void Wait()
     {
+        counter_->wait(loadedCounter_, std::memory_order_acquire);
+        loadedCounter_ = counter_->load(std::memory_order_acquire);
+    }
 
+    bool Closed() const
+    {
+        return closed_->load(std::memory_order_acquire);
+    }
+
+    bool TryPeek(TMessage& outMessage)
+    {
+        if (!pipe_->Pop(outMessage))
+        {
+        }
+    }
+
+    void Pop()
+    {
     }
 
 private:
     const std::shared_ptr<TPipe> pipe_;
-    const std::shared_ptr<std::atomic_flag> flag_;
+    const std::shared_ptr<std::atomic_int32_t> counter_; // 값 변경에 대한 의미만 가지며, 값 자체는 의미 없음
+    const std::shared_ptr<std::atomic_bool> closed_;
+    int32_t loadedCounter_;
 };
 
-template<typename T, typename... TArgs>
-std::pair<Sender<T>, Receiver<T>> CreateChannel(TArgs&& ...args)
+template <typename T, typename... TArgs>
+std::pair<Sender<T>, Receiver<T>> CreateChannel(TArgs&&... args)
 {
     auto terminal = std::make_shared<T>(std::forward<TArgs>(args)...);
-    return { terminal, std::move(terminal) };
+    return {terminal, std::move(terminal)};
 }
 
-class GameServerTerminal final
+class GameServerMessageQueue final
 {
 public:
-    explicit GameServerTerminal();
+    struct Message final
+    {
+        uint64_t SessionId;
+        uint16_t MessageType;
+        uint16_t BodySize;
+        const char* Body;
+    };
 
-    bool PushMessage(uint64_t sessionId,
-                     uint16_t messageType,
-                     uint16_t messageBodySize,
-                     const char* messageBody);
+    explicit GameServerMessageQueue();
+
+    bool Push(Message message);
 
     /**
      * 소비자 스레드에서 호출.
      * @return
      */
-     [[nodiscard]]
-    __forceinline bool TryPeekMessage(uint64_t& outSessionId, uint16_t& outMessageType, uint16_t& outMessageBodySize, const char*& outMessageBody) const
+    [[nodiscard]]
+    __forceinline bool TryPeek(Message& outMessage) const
     {
         auto& popQueue = queues_[1 - currentPushIndex_];
         if (popQueue.empty())
@@ -87,10 +121,10 @@ public:
         }
 
         auto& front = popQueue.front();
-        outSessionId = front.SessionId;
-        outMessageType = front.MessageType;
-        outMessageBodySize = front.MessageBodySize;
-        outMessageBody = front.MessageBody.get();
+        outMessage.SessionId = front.SessionId;
+        outMessage.MessageType = front.MessageType;
+        outMessage.BodySize = front.BodySize;
+        outMessage.Body = front.Body;
 
         return true;
     }
@@ -98,12 +132,7 @@ public:
     /**
      * 소비자 스레드에서 호출.
      */
-    void PopMessage();
-
-    /**
-     * 소비자 스레드에서 호출.
-     */
-    void SwapQueue();
+    void Pop();
 
 private:
     static constexpr int PoolIndex_1_16 = 0;
@@ -115,13 +144,6 @@ private:
     static constexpr int PoolIndex_513_1024 = 6;
     static constexpr int PoolIndex_1025_MaxMessageBodySize = 7;
 
-    struct Message
-    {
-        uint64_t SessionId;
-        uint16_t MessageType;
-        uint16_t MessageBodySize;
-        std::unique_ptr<char[]> MessageBody;
-    };
     int currentPushIndex_;
 
     std::array<std::array<std::vector<std::unique_ptr<char[]>>, 8>, 2> pools_;
@@ -156,7 +178,7 @@ private:
             outIndex = PoolIndex_129_256;
             outAllocateSize = 256;
         }
-        else if (inSize >  64)
+        else if (inSize > 64)
         {
             outIndex = PoolIndex_65_128;
             outAllocateSize = 128;
@@ -180,6 +202,11 @@ private:
 
         return true;
     }
+
+    /**
+     * 소비자 스레드에서 호출.
+     */
+    void Swap();
 };
 
 #endif //RATKINIASERVER_GAMESERVERTERMINAL_H
