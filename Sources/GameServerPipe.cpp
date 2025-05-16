@@ -16,7 +16,7 @@ bool GameServerPipe::Push(PipeMessage message)
 {
     int poolIndex;
     size_t allocateSize;
-    ERR_FAIL_COND_V(TryGetPoolIndexForSize(message.BodySize, poolIndex, allocateSize), false);
+    ERR_FAIL_COND_V(false == TryGetPoolIndexForSize(message.BodySize, poolIndex, allocateSize), false);
 
     std::shared_lock lock{ mutex_ };
     std::lock_guard producerLock{ producerMutex_ };
@@ -49,7 +49,6 @@ bool GameServerPipe::Push(PipeMessage message)
     auto& pushQueue = queues_[currentPushIndex_];
     pushQueue.emplace(std::move(queueMessage));
     count_.fetch_add(1, std::memory_order_release);
-
     return true;
 }
 
@@ -64,7 +63,7 @@ void GameServerPipe::Pop()
 
     int poolIndex;
     size_t allocateSize;
-    ERR_FAIL_COND(TryGetPoolIndexForSize(popQueue.front().BodySize, poolIndex, allocateSize));
+    ERR_FAIL_COND(false == TryGetPoolIndexForSize(popQueue.front().BodySize, poolIndex, allocateSize));
 
     auto& pool = pools_[1 - currentPushIndex_][poolIndex];
     pool.emplace_back(std::move(popQueue.front().Body));

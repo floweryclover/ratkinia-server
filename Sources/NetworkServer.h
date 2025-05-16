@@ -58,7 +58,7 @@ private:
 
     void WorkerThreadBody(int threadId);
 
-    bool AcceptAsync();
+    void AcceptAsync();
 
     void PostAccept(Session& session);
 

@@ -8,6 +8,7 @@
 #include "RatkiniaProtocol.gen.h"
 #include <WinSock2.h>
 #include <memory>
+#include <string>
 
 enum class IOType : uint8_t
 {
@@ -120,6 +121,9 @@ public:
     }
 
 private:
+    SOCKADDR_IN addressRaw_;
+    std::string address_;
+
     std::unique_ptr<char[]> receiveBuffer_;
     std::unique_ptr<char[]> receiveTempBuffer_;
     size_t receiveBufferBegin_;

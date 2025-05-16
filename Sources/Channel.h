@@ -54,7 +54,10 @@ public:
             return false;
         }
 
-        return channel_->Pipe.Push(std::forward<Message>(message));
+        const auto pushResult = channel_->Pipe.Push(std::forward<Message>(message));
+        channel_->Version.fetch_add(1, std::memory_order_release);
+        channel_->Version.notify_one();
+        return pushResult;
     }
 
 private:
@@ -99,7 +102,7 @@ public:
         while (true)
         {
             if (channel_->Closed.load(std::memory_order_acquire)
-                || channel_->Pipe.Empty())
+                || !channel_->Pipe.Empty())
             {
                 return;
             }

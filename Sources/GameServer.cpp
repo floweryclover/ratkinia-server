@@ -41,7 +41,6 @@ void GameServer::ThreadBody()
         }
 
         GameServerPipe::PipeMessage message;
-
         while (gameServerReceiver_.TryPeek(message))
         {
             ctsHandler_.HandleCts(message.SessionId,
@@ -50,7 +49,6 @@ void GameServer::ThreadBody()
                                   message.Body);
             gameServerReceiver_.Pop();
         }
-
         gameServerReceiver_.Wait();
     }
 }

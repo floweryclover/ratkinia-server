@@ -131,11 +131,7 @@ void NetworkServer::Start(const std::string& listenAddress, unsigned short liste
     for (int i = 0; i < AcceptPoolSize; ++i)
     {
         acceptContexts_[i].SessionId = NullSessionId;
-        if (!AcceptAsync())
-        {
-            mainServerSender_.Send(MainServerPipe::Command::Shutdown);
-            return;
-        }
+        AcceptAsync();
     }
 }
 
@@ -167,11 +163,7 @@ void NetworkServer::WorkerThreadBody(const int threadId)
                                       acceptContext.SessionId);
                     sessions_.erase(acceptContext.SessionId);
                     acceptContext.SessionId = NullSessionId;
-                    if (!AcceptAsync())
-                    {
-                        mainServerSender_.Send(MainServerPipe::Command::Shutdown);
-                        break;
-                    }
+                    AcceptAsync();
                     continue;
                 }
             }
@@ -189,8 +181,11 @@ void NetworkServer::WorkerThreadBody(const int threadId)
         if (context.Type == IOType::Accept)
         {
             auto& acceptContext = *reinterpret_cast<AcceptContext*>(reinterpret_cast<size_t>(overlapped));
-            PostAccept(sessions_.at(acceptContext.SessionId));
+            const auto sessionId = acceptContext.SessionId;
             acceptContext.SessionId = NullSessionId;
+
+            PostAccept(sessions_.at(sessionId));
+            AcceptAsync();
         }
         else if (context.Type == IOType::Receive)
         {
@@ -204,7 +199,7 @@ void NetworkServer::WorkerThreadBody(const int threadId)
     MessagePrinter::WriteLine("IOCP 워커 스레드", threadId, "종료");
 }
 
-bool NetworkServer::AcceptAsync()
+void NetworkServer::AcceptAsync()
 {
     while (sessions_.contains(newSessionId_) || newSessionId_ == NullSessionId)
     {
@@ -224,7 +219,8 @@ bool NetworkServer::AcceptAsync()
     if (!acceptContext)
     {
         ERR_PRINT_VARARGS("AcceptContext 확보에 실패하였습니다.");
-        return false;
+        mainServerSender_.Send(MainServerPipe::Command::Shutdown);
+        return;
     }
     ZeroMemory(acceptContext, sizeof(AcceptContext));
     acceptContext->Context.Type = IOType::Accept;
@@ -234,7 +230,8 @@ bool NetworkServer::AcceptAsync()
     if (clientSocket == INVALID_SOCKET)
     {
         ERR_PRINT_VARARGS("Accept 소켓 생성에 실패하였습니다:", WSAGetLastError());
-        return false;
+        mainServerSender_.Send(MainServerPipe::Command::Shutdown);
+        return;
     }
 
 
@@ -248,10 +245,9 @@ bool NetworkServer::AcceptAsync()
     {
         acceptContext->SessionId = NullSessionId;
         sessions_.erase(sessionId);
-        return false;
+        mainServerSender_.Send(MainServerPipe::Command::Shutdown);
+        return;
     }
-
-    return true;
 }
 
 void NetworkServer::PostAccept(Session& session)
@@ -269,6 +265,12 @@ void NetworkServer::PostAccept(Session& session)
 
 void NetworkServer::PostReceive(Session& session, const size_t bytesTransferred)
 {
+    if (bytesTransferred == 0)
+    {
+        sessions_.erase(session.SessionId);
+        return;
+    }
+
     session.PostReceive(bytesTransferred);
     while (session.TryPopMessage([this](auto sessionId, auto messageType, auto bodySize, auto body)
                                  {

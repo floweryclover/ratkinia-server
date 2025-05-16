@@ -38,11 +38,13 @@ public:
      * @return
      */
     [[nodiscard]]
-    __forceinline bool TryPeek(Message& outMessage) const
+    __forceinline bool TryPeek(Message& outMessage)
     {
         auto& popQueue = queues_[1 - currentPushIndex_];
         if (popQueue.empty())
         {
+            std::unique_lock lock{ mutex_ };
+            currentPushIndex_ = 1 - currentPushIndex_;
             return false;
         }
 

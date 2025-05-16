@@ -27,6 +27,7 @@ Session::Session(const SOCKET socket, const size_t sessionId)
 
 Session::~Session()
 {
+    MessagePrinter::WriteLine("[접속 해제]", address_);
     shutdown(Socket, SD_BOTH);
     closesocket(Socket);
 }
@@ -57,15 +58,17 @@ bool Session::PostAccept(const HANDLE iocpHandle)
                          reinterpret_cast<sockaddr**>(&remoteAddr),
                          &remoteAddrLen);
 
+    addressRaw_ = *remoteAddr;
     char buf[INET_ADDRSTRLEN];
-    if (inet_ntop(AF_INET, &remoteAddr->sin_addr, buf, INET_ADDRSTRLEN) == nullptr)
+    if (inet_ntop(AF_INET, &remoteAddr->sin_addr, buf, INET_ADDRSTRLEN))
     {
-        MessagePrinter::WriteLine("알 수 없는 클라이언트 접속");
+        address_ = buf;
     }
     else
     {
-        MessagePrinter::WriteLine(buf, "접속");
+        address_ = "알 수 없음";
     }
+    MessagePrinter::WriteLine("[접속]", address_);
 
     return true;
 }

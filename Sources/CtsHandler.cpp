@@ -31,7 +31,8 @@ void CtsHandler::OnLoginRequest(uint64_t context,
                                 const std::string& id,
                                 const std::string& hashed_password)
 {
-//    std::cout << context << ": " << id << ", " << hashed_password << std::endl;
+
+    std::cout << context << ": " << id << ", " << hashed_password << std::endl;
 //    constexpr const char* HexChars = "0123456789abcdef";
 //
 //    unsigned char HashedPassword[64 + 1];
@@ -40,7 +41,7 @@ void CtsHandler::OnLoginRequest(uint64_t context,
 //    EVP_MD_CTX* Ctx = EVP_MD_CTX_new();
 //
 //
-//    check(1 == EVP_DigestInit_ex(Ctx, OpenSSL::EVP_sha512(), nullptr));
+//    check(1 == EVP_DigestInit_ex(Ctx, EVP_sha512(), nullptr));
 //
 //    check(1 == EVP_DigestUpdate(Ctx, PasswordString, 64));
 //
