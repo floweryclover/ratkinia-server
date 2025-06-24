@@ -20,6 +20,8 @@ namespace RatkiniaProtocol
 
         virtual void OnLoginResponse(uint64_t context, const bool successful, const std::string& failure_reason) = 0;
 
+        virtual void OnRegisterResponse(uint64_t context, const RegisterResponse_FailedReason failed_reason) = 0;
+
         void HandleStc(
             const uint64_t context,
             const uint16_t messageType,
@@ -37,6 +39,16 @@ namespace RatkiniaProtocol
                         return;
                     }
                     static_cast<TDerivedStub*>(this)->OnLoginResponse(context, LoginResponseMessage.successful(), LoginResponseMessage.failure_reason());
+                }
+                case static_cast<int32_t>(StcMessageType::RegisterResponse):
+                {
+                    RegisterResponse RegisterResponseMessage;
+                    if (!RegisterResponseMessage.ParseFromArray(body, bodySize))
+                    {
+                        static_cast<TDerivedStub*>(this)->OnParseMessageFailed(context, static_cast<StcMessageType>(messageType));
+                        return;
+                    }
+                    static_cast<TDerivedStub*>(this)->OnRegisterResponse(context, RegisterResponseMessage.failed_reason());
                 }
             }
 

@@ -6,17 +6,17 @@
 #define MAINSERVER_H
 
 #include "Channel.h"
-#include "MainServerPipe.h"
+#include "MainServerChannel.h"
 
 class MainServer final
 {
 public:
-    explicit MainServer(MpscReceiver<MainServerPipe> mainServerReceiver);
+    explicit MainServer(MainServerChannel::MpscReceiver mainServerReceiver);
 
     void Run();
 
 private:
-    MpscReceiver<MainServerPipe> mainServerReceiver_;
+    MainServerChannel::MpscReceiver mainServerReceiver_;
 };
 
 #endif //MAINSERVER_H

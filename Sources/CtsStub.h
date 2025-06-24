@@ -2,18 +2,17 @@
 // Created by floweryclover on 2025-05-05.
 //
 
-#ifndef RATKINIASERVER_CTSHANDLER_H
-#define RATKINIASERVER_CTSHANDLER_H
+#ifndef RATKINIASERVER_CTSSTUB_H
+#define RATKINIASERVER_CTSSTUB_H
 
 #include "CtsStub.gen.h"
-#include <functional>
 
 class GameServer;
 
-class CtsHandler final : public RatkiniaProtocol::CtsStub<CtsHandler>
+class CtsStub final : public RatkiniaProtocol::CtsStub<CtsStub>
 {
 public:
-    explicit CtsHandler(GameServer& gameServer);
+    explicit CtsStub(GameServer& gameServer);
 
     void OnParseMessageFailed(uint64_t context,
                               RatkiniaProtocol::CtsMessageType messageType) override;
@@ -33,4 +32,4 @@ private:
     GameServer& gameServer_;
 };
 
-#endif //RATKINIASERVER_CTSHANDLER_H
+#endif //RATKINIASERVER_CTSSTUB_H

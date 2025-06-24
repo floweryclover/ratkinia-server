@@ -25,6 +25,7 @@ namespace RatkiniaProtocol
     enum class StcMessageType : uint16_t
     {
         LoginResponse = 0,
+        RegisterResponse = 1,
     };
 }
 

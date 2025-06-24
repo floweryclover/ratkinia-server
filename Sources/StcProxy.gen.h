@@ -12,12 +12,11 @@ namespace RatkiniaProtocol
     class StcProxy
     {
     public:
-        void LoginResponse(const uint64_t context, const bool successful, const std::string& failure_reason)
+        void RegisterResponse(const uint64_t context, const RegisterResponse_FailedReason failed_reason)
         {
-            class LoginResponse LoginResponseMessage;
-            LoginResponseMessage.set_successful(successful);
-            LoginResponseMessage.set_failure_reason(failure_reason);
-            static_cast<TDerivedProxy*>(this)->WriteMessage(context, StcMessageType::LoginResponse, LoginResponseMessage);
+            class RegisterResponse RegisterResponseMessage;
+            RegisterResponseMessage.set_failed_reason(failed_reason);
+            static_cast<TDerivedProxy*>(this)->WriteMessage(context, StcMessageType::RegisterResponse, RegisterResponseMessage);
         }
     };
 }

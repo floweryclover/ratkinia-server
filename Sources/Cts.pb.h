@@ -131,7 +131,7 @@ class RegisterRequest final : public ::google::protobuf::MessageLite
     InternalSwap(other);
   }
 
-  // implements PipeMessage ----------------------------------------------
+  // implements Message ----------------------------------------------
 
   RegisterRequest* New(::google::protobuf::Arena* arena = nullptr) const final {
     return ::google::protobuf::MessageLite::DefaultConstruct<RegisterRequest>(arena);
@@ -309,7 +309,7 @@ class LoginRequest final : public ::google::protobuf::MessageLite
     InternalSwap(other);
   }
 
-  // implements PipeMessage ----------------------------------------------
+  // implements Message ----------------------------------------------
 
   LoginRequest* New(::google::protobuf::Arena* arena = nullptr) const final {
     return ::google::protobuf::MessageLite::DefaultConstruct<LoginRequest>(arena);

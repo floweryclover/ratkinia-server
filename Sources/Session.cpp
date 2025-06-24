@@ -9,17 +9,16 @@
 #include <mswsock.h>
 
 Session::Session(const SOCKET socket, const size_t sessionId)
-    : Socket{ socket },
-      SessionId{ sessionId },
+    : SessionId{ sessionId },
       BufferCapacity{ RatkiniaProtocol::MessageMaxSize * 128 },
+      socket_{ socket },
       receiveTempBuffer_{ std::make_unique<char[]>(RatkiniaProtocol::MessageMaxSize) },
       receiveBuffer_{ std::make_unique<char[]>(BufferCapacity) },
-      receiveBufferBegin_{ 0 },
-      receiveBufferEnd_{ 0 },
-      receiveBufferSize_{ 0 },
+      receiveBufferHead_{ 0 },
+      receiveBufferTail_{ 0 },
       sendBuffer_{ std::make_unique<char[]>(BufferCapacity) },
-      sendBufferBegin_{ 0 },
-      sendBufferEnd_{ 0 }
+      sendBufferHead_{ 0 },
+      sendBufferTail_{ 0 }
 {
     ZeroMemory(&IOContext_Receive, sizeof(IOContext_Receive));
     ZeroMemory(&IOContext_Send, sizeof(IOContext_Send));
@@ -27,15 +26,16 @@ Session::Session(const SOCKET socket, const size_t sessionId)
 
 Session::~Session()
 {
-    MessagePrinter::WriteLine("[접속 해제]", address_);
-    shutdown(Socket, SD_BOTH);
-    closesocket(Socket);
+    if (socket_ != INVALID_SOCKET)
+    {
+        Close();
+    }
 }
 
-bool Session::PostAccept(const HANDLE iocpHandle)
+bool Session::TryPostAccept(HANDLE iocpHandle)
 {
     if (nullptr
-        == CreateIoCompletionPort(reinterpret_cast<HANDLE>(Socket),
+        == CreateIoCompletionPort(reinterpret_cast<HANDLE>(socket_),
                                   iocpHandle,
                                   reinterpret_cast<ULONG_PTR>(this),
                                   0))
@@ -73,11 +73,11 @@ bool Session::PostAccept(const HANDLE iocpHandle)
     return true;
 }
 
-bool Session::AcceptAsync(const SOCKET listenSocket, LPOVERLAPPED acceptOverlapped)
+bool Session::TryAcceptAsync(SOCKET listenSocket, LPOVERLAPPED acceptOverlapped)
 {
     if (FALSE
         == AcceptEx(listenSocket,
-                    Socket,
+                    socket_,
                     receiveBuffer_.get(),
                     0,
                     sizeof(SOCKADDR_IN) + 16,
@@ -96,17 +96,29 @@ bool Session::AcceptAsync(const SOCKET listenSocket, LPOVERLAPPED acceptOverlapp
     return true;
 }
 
-bool Session::ReceiveAsync()
+bool Session::TryReceiveAsync()
 {
+    const auto loadedReceiveBufferHead{ receiveBufferHead_->load(std::memory_order_acquire) };
+    const auto loadedReceiveBufferTail{ receiveBufferTail_->load(std::memory_order_acquire) };
     WSABUF wsabuf{};
-    wsabuf.buf = receiveBuffer_.get() + receiveBufferBegin_;
-    wsabuf.len = BufferCapacity - receiveBufferBegin_;
+    wsabuf.buf = receiveBuffer_.get() + loadedReceiveBufferHead;
+    wsabuf.len = loadedReceiveBufferTail >= loadedReceiveBufferHead ? BufferCapacity - loadedReceiveBufferTail : loadedReceiveBufferHead - loadedReceiveBufferTail - 1;
 
     IOContext_Receive.Type = IOType::Receive;
 
+    if (wsabuf.len == 0)
+    {
+        return false;
+    }
+
+    if (receiveFlag_->exchange(true, std::memory_order_acq_rel))
+    {
+        return true;
+    }
+
     DWORD dwFlags = 0;
     if (0
-        != WSARecv(Socket,
+        != WSARecv(socket_,
                    &wsabuf,
                    1,
                    nullptr,
@@ -117,6 +129,7 @@ bool Session::ReceiveAsync()
         const auto errorCode = WSAGetLastError();
         if (errorCode != WSA_IO_PENDING)
         {
+            receiveFlag_->store(false, std::memory_order_release);
             ERR_PRINT_VARARGS("WSARecv() 호출 실패:", errorCode);
             return false;
         }
@@ -125,9 +138,56 @@ bool Session::ReceiveAsync()
     return true;
 }
 
-void Session::PostReceive(size_t bytesTransferred)
+bool Session::TrySendAsync()
 {
-    receiveBufferSize_ += bytesTransferred;
-    receiveBufferEnd_ = (receiveBufferEnd_ + bytesTransferred) % BufferCapacity;
+    const auto loadedSendBufferHead{ sendBufferHead_->load(std::memory_order_acquire) };
+    const auto loadedSendBufferTail{ sendBufferTail_->load(std::memory_order_acquire) };
+    WSABUF wsabuf{};
+    wsabuf.buf = sendBuffer_.get() + loadedSendBufferHead;
+    wsabuf.len = loadedSendBufferTail >= loadedSendBufferHead ? loadedSendBufferTail - loadedSendBufferHead : BufferCapacity - loadedSendBufferHead;
+
+    if (wsabuf.len == 0
+        || sendFlag_->exchange(true, std::memory_order_acq_rel))
+    {
+        return true;
+    }
+
+    IOContext_Send.Type = IOType::Send;
+
+    if (0
+        != WSASend(socket_,
+                   &wsabuf,
+                   1,
+                   nullptr,
+                   0,
+                   reinterpret_cast<LPOVERLAPPED>(&IOContext_Send),
+                   nullptr))
+    {
+        const auto errorCode = WSAGetLastError();
+        if (errorCode != WSA_IO_PENDING)
+        {
+            sendFlag_->store(false, std::memory_order_release);
+            ERR_PRINT_VARARGS("WSASend() 호출 실패:", errorCode);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void Session::Close()
+{
+    if (socket_ != INVALID_SOCKET)
+    {
+        shutdown(socket_, SD_BOTH);
+        closesocket(socket_);
+        socket_ = INVALID_SOCKET;
+        MessagePrinter::WriteLine("[접속 해제]", address_);
+    }
+}
+
+bool Session::IsErasable()
+{
+    return !sendFlag_->load(std::memory_order_acquire) && !receiveFlag_->load(std::memory_order_acquire);
 }
 

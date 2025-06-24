@@ -6,10 +6,11 @@
 #define RATKINIASERVER_SESSION_H
 
 #include "RatkiniaProtocol.gen.h"
+#include "Aligned.h"
 #include <WinSock2.h>
 #include <memory>
 #include <string>
-
+#include <iostream>
 enum class IOType : uint8_t
 {
     Send,
@@ -26,7 +27,6 @@ struct OverlappedEx final
 class Session final
 {
 public:
-    const SOCKET Socket;
     const size_t SessionId;
     const size_t BufferCapacity;
 
@@ -37,34 +37,74 @@ public:
 
     ~Session();
 
-    bool AcceptAsync(SOCKET listenSocket, LPOVERLAPPED acceptOverlapped);
+    void Close();
 
-    bool PostAccept(HANDLE iocpHandle);
+    bool TryAcceptAsync(SOCKET listenSocket, LPOVERLAPPED acceptOverlapped);
 
-    bool ReceiveAsync();
+    bool TryPostAccept(HANDLE iocpHandle);
 
-    void PostReceive(size_t bytesTransferred);
+    bool TryReceiveAsync();
+
+    bool TrySendAsync();
+
+    bool IsErasable();
+
+    bool TryEnqueueSendBuffer(const char* const data, const size_t size)
+    {
+        const auto loadedSendBufferHead{ sendBufferHead_->load(std::memory_order_acquire) };
+        const auto loadedSendBufferTail{ sendBufferTail_->load(std::memory_order_acquire) };
+        const auto sendBufferSize{ loadedSendBufferHead <= loadedSendBufferTail ? loadedSendBufferTail - loadedSendBufferHead : BufferCapacity - loadedSendBufferHead + loadedSendBufferTail };
+        const auto sendBufferAvailable{ BufferCapacity - sendBufferSize - 1 };
+
+        if (size > sendBufferAvailable)
+        {
+            return false;
+        }
+
+        const auto primarySize{ std::min<size_t>(size, BufferCapacity - loadedSendBufferTail) };
+        const auto secondarySize{ size - primarySize };
+        memcpy(sendBuffer_.get() + loadedSendBufferTail, data, primarySize);
+        memcpy(sendBuffer_.get(), data + primarySize, secondarySize);
+        sendBufferTail_->store((loadedSendBufferTail + size) % BufferCapacity, std::memory_order_release);
+
+        return true;
+    }
+
+    void PostReceive(const size_t bytesTransferred)
+    {
+        receiveFlag_->store(false, std::memory_order_release);
+        receiveBufferTail_->store((receiveBufferTail_->load(std::memory_order_acquire) + bytesTransferred) % BufferCapacity);
+    }
+
+    void PostSend(const size_t bytesTransferred)
+    {
+        sendFlag_->store(false, std::memory_order_release);
+        sendBufferHead_->store((sendBufferHead_->load(std::memory_order_acquire) + bytesTransferred) % BufferCapacity, std::memory_order_release);
+    }
 
     bool TryPopMessage(auto&& push, auto&& onFailed)
     {
         using namespace RatkiniaProtocol;
 
-        const auto receiveBufferSize = receiveBufferSize_;
+        const auto loadedReceiveBufferHead{ receiveBufferHead_->load(std::memory_order_acquire) };
+        const auto loadedReceiveBufferTail{ receiveBufferTail_->load(std::memory_order_acquire) };
+        const auto receiveBufferSize{ loadedReceiveBufferHead <= loadedReceiveBufferTail ? loadedReceiveBufferTail - loadedReceiveBufferHead : BufferCapacity
+                                                                                                                                               - loadedReceiveBufferHead
+                                                                                                                                               + loadedReceiveBufferTail };
         if (receiveBufferSize < MessageHeaderSize)
         {
             return false;
         }
 
-        MessageHeader header{};
-        const auto receiveBufferBegin_beforeHeader = receiveBufferBegin_;
         const auto primaryHeaderSize = std::min<size_t>(MessageHeaderSize,
                                                         BufferCapacity
-                                                        - receiveBufferBegin_beforeHeader);
+                                                        - loadedReceiveBufferHead);
         const auto secondaryHeaderSize = MessageHeaderSize - primaryHeaderSize;
 
+        MessageHeader header{};
         memcpy_s(&header,
                  primaryHeaderSize,
-                 receiveBuffer_.get() + receiveBufferBegin_beforeHeader,
+                 receiveBuffer_.get() + loadedReceiveBufferHead,
                  primaryHeaderSize);
         memcpy_s(reinterpret_cast<char*>(&header) + primaryHeaderSize,
                  secondaryHeaderSize,
@@ -79,19 +119,19 @@ public:
             return false;
         }
 
-        const auto receiveBufferBegin_afterHeader = (receiveBufferBegin_beforeHeader
-                                                     + MessageHeaderSize) % BufferCapacity;
+        const auto loadedReceiveBufferHeadAfterHeader = (loadedReceiveBufferHead
+                                                         + MessageHeaderSize) % BufferCapacity;
         const auto primaryBodySize = std::min<size_t>(header.BodyLength,
                                                       BufferCapacity
-                                                      - receiveBufferBegin_afterHeader);
+                                                      - loadedReceiveBufferHeadAfterHeader);
         const auto secondaryBodySize = header.BodyLength - primaryBodySize;
 
         if (primaryBodySize == header.BodyLength)
         {
             if (!push(SessionId,
-                            header.MessageType,
-                            header.BodyLength,
-                            receiveBuffer_.get() + receiveBufferBegin_afterHeader))
+                      header.MessageType,
+                      header.BodyLength,
+                      receiveBuffer_.get() + loadedReceiveBufferHeadAfterHeader))
             {
                 onFailed(SessionId);
             }
@@ -100,39 +140,40 @@ public:
         {
             memcpy_s(receiveTempBuffer_.get(),
                      primaryBodySize,
-                     receiveBuffer_.get() + receiveBufferBegin_afterHeader,
+                     receiveBuffer_.get() + loadedReceiveBufferHeadAfterHeader,
                      primaryBodySize);
             memcpy_s(receiveTempBuffer_.get() + primaryBodySize,
                      secondaryBodySize,
                      receiveBuffer_.get(),
                      secondaryBodySize);
             if (!push(SessionId,
-                             header.MessageType,
-                             header.BodyLength,
-                             receiveTempBuffer_.get()))
+                      header.MessageType,
+                      header.BodyLength,
+                      receiveTempBuffer_.get()))
             {
                 onFailed(SessionId);
             }
         }
 
-        receiveBufferBegin_ = (receiveBufferBegin_afterHeader + header.BodyLength) % BufferCapacity;
-        receiveBufferSize_ -= messageTotalSize;
+        receiveBufferHead_->store((loadedReceiveBufferHeadAfterHeader + header.BodyLength) % BufferCapacity, std::memory_order_release);
         return true;
     }
 
 private:
+    SOCKET socket_;
     SOCKADDR_IN addressRaw_;
     std::string address_;
 
     std::unique_ptr<char[]> receiveBuffer_;
     std::unique_ptr<char[]> receiveTempBuffer_;
-    size_t receiveBufferBegin_;
-    size_t receiveBufferEnd_;
-    size_t receiveBufferSize_;
-
     std::unique_ptr<char[]> sendBuffer_;
-    size_t sendBufferBegin_;
-    size_t sendBufferEnd_;
+
+    AlignedAtomic<size_t> receiveBufferHead_;
+    AlignedAtomic<size_t> receiveBufferTail_;
+    AlignedAtomic<bool> receiveFlag_;
+    AlignedAtomic<size_t> sendBufferHead_;
+    AlignedAtomic<size_t> sendBufferTail_;
+    AlignedAtomic<bool> sendFlag_;
 };
 
 

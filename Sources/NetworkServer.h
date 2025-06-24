@@ -6,9 +6,9 @@
 #define NETWORKSERVER_H
 
 #include "Channel.h"
-#include "GameServerPipe.h"
-#include "NetworkServerPipe.h"
-#include "MainServerPipe.h"
+#include "GameServerChannel.h"
+#include "NetworkServerChannel.h"
+#include "MainServerChannel.h"
 #include "Session.h"
 #include <ws2tcpip.h>
 #include <WinSock2.h>
@@ -22,9 +22,9 @@
 class NetworkServer final
 {
 public:
-    explicit NetworkServer(MpscReceiver<NetworkServerPipe> networkServerReceiver,
-                           MpscSender<MainServerPipe> mainServerSender,
-                           MpscSender<GameServerPipe> gameServerSender);
+    explicit NetworkServer(NetworkServerChannel::SpscReceiver networkServerReceiver,
+                           MainServerChannel::MpscSender mainServerSender,
+                           GameServerChannel::MpscSender gameServerSender);
 
     ~NetworkServer();
 
@@ -42,9 +42,9 @@ private:
     static constexpr int AcceptPoolSize = 1;
     static constexpr size_t SessionBufferSize = 1024;
 
-    MpscReceiver<NetworkServerPipe> networkServerReceiver_;
-    MpscSender<MainServerPipe> mainServerSender_;
-    MpscSender<GameServerPipe> gameServerSender_;
+    NetworkServerChannel::SpscReceiver networkServerReceiver_;
+    MainServerChannel::MpscSender mainServerSender_;
+    GameServerChannel::MpscSender gameServerSender_;
 
     SOCKET listenSocket_;
     HANDLE iocpHandle_;
@@ -52,11 +52,15 @@ private:
 
     uint64_t newSessionId_;
     std::unordered_map<uint64_t, Session> sessions_;
+    std::mutex sessionsMutex_;
     std::unique_ptr<AcceptContext[]> acceptContexts_;
 
     std::vector<std::thread> workerThreads_;
+    std::thread channelReceiverThread_;
 
     void WorkerThreadBody(int threadId);
+
+    void ChannelReceiverThreadBody();
 
     void AcceptAsync();
 
@@ -64,9 +68,9 @@ private:
 
     void PostReceive(Session& session, size_t bytesTransferred);
 
-    void OnMessagePushFailed(size_t sessionId);
+    void PostSend(Session& session, size_t bytesTransferred);
 
-    void DisconnectSession(uint64_t session);
+    void DisconnectSession(uint64_t sessionId);
 };
 
 #endif //NETWORKSERVER_H

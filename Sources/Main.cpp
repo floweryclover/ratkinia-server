@@ -13,13 +13,13 @@ int main()
         return 1;
     }
 
-    auto [mainServerSender, mainServerReceiver] = CreateMpscChannel<MainServerPipe>();
-    auto [gameServerSender, gameServerReceiver] = CreateMpscChannel<GameServerPipe>();
-    auto [networkServerSender, networkServerReceiver] = CreateMpscChannel<NetworkServerPipe>();
+    auto [mainServerSender, mainServerReceiver] = MainServerChannel::CreateMpscChannel();
+    auto [gameServerSender, gameServerReceiver] = GameServerChannel::CreateMpscChannel();
+    auto [networkServerSender, networkServerReceiver] = NetworkServerChannel::CreateSpscChannel();
 
     GameServer gameServer{ std::move(gameServerReceiver),
                            mainServerSender,
-                           networkServerSender };
+                           std::move(networkServerSender) };
     NetworkServer networkServer{ std::move(networkServerReceiver),
                                  std::move(mainServerSender),
                                  std::move(gameServerSender) };
