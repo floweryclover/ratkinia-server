@@ -34,7 +34,10 @@ public:
 
     __forceinline void ReleaseScopedMessage(const PopMessageType& message)
     {
-        pools_[1 - currentPushIndex_].Release(message.BodySize, message.Body);
+        if (message.Body)
+        {
+            pools_[1 - currentPushIndex_].Release(message.BodySize, message.Body);
+        }
     }
 
     /**
@@ -56,7 +59,7 @@ public:
         const auto sessionId = popQueueMessage.SessionId;
         const auto messageType = popQueueMessage.MessageType;
         const auto bodySize = popQueueMessage.BodySize;
-        auto body = std::move(popQueueMessage.Body);
+        auto body = popQueueMessage.Body;
 
         popQueue.pop();
         count_.fetch_sub(1, std::memory_order_release);

@@ -32,6 +32,7 @@ bool GameServerChannel::Push(PushMessage message)
         auto& pool = pools_[currentPushIndex_];
 
         auto block = pool.Acquire(message.BodySize);
+        ERR_FAIL_NULL_V(block, false);
 
         memcpy_s(block, message.BodySize, message.Body, message.BodySize);
         queueMessage.Body = block;

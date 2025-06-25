@@ -40,6 +40,8 @@ void CtsStub::OnLoginRequest(uint64_t context,
 
     auto query = transaction{ gameServer_.GetDbConnection() };
     const auto result = query.exec("SELECT * FROM auth.accounts WHERE user_id=$1;", params{ id });
+
+    gameServer_.GetStcProxy().LoginResponse(context, false, "하하하하");
 }
 
 void CtsStub::OnRegisterRequest(uint64_t context,
