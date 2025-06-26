@@ -5,6 +5,7 @@
 #ifndef RATKINIASERVER_SPSCRINGBUFFER_H
 #define RATKINIASERVER_SPSCRINGBUFFER_H
 
+#include "ScopedBufferHandle.h"
 #include <atomic>
 #include <optional>
 #include <memory>
@@ -15,45 +16,6 @@
 class alignas(64) SpscRingBuffer final
 {
 public:
-    struct Enqueuer final
-    {
-        explicit Enqueuer(SpscRingBuffer& owner, const bool isFromTempBuffer, char* const enqueueBuffer, const size_t enqueueBufferSize)
-            : EnqueueBuffer{ enqueueBuffer }, EnqueueBufferSize{ enqueueBufferSize },
-              owner_{ owner }, isFromTempBuffer_{ isFromTempBuffer }
-        {
-        }
-
-        ~Enqueuer()
-        {
-            if (!isFromTempBuffer_) [[likely]]
-            {
-                owner_.tail_.store((owner_.tail_.load(std::memory_order_acquire) + EnqueueBufferSize) % owner_.Capacity, std::memory_order_release);
-                return;
-            }
-
-            const auto [loadedSize, loadedHead, loadedTail]{ owner_.GetSize() };
-            const auto primarySize{ owner_.Capacity - loadedTail };
-            const auto secondarySize{ EnqueueBufferSize - primarySize };
-            memcpy(owner_.ringBuffer_.get() + loadedTail, EnqueueBuffer, primarySize);
-            memcpy(owner_.ringBuffer_.get(), EnqueueBuffer + primarySize, secondarySize);
-        }
-
-        Enqueuer(const Enqueuer&) = delete;
-
-        Enqueuer& operator=(const Enqueuer&) = delete;
-
-        Enqueuer(Enqueuer&&) = delete;
-
-        Enqueuer& operator=(Enqueuer&&) = delete;
-
-        char* const EnqueueBuffer;
-        const size_t EnqueueBufferSize;
-
-    private:
-        SpscRingBuffer& owner_;
-        const bool isFromTempBuffer_;
-    };
-
     const size_t Capacity;
     const size_t MaxBlockSize;
 
@@ -94,7 +56,7 @@ public:
         return true;
     }
 
-    __forceinline std::optional<Enqueuer> TryGetEnqueuer(const size_t size)
+    __forceinline std::optional<ScopedBufferEnqueuer<SpscRingBuffer>> TryGetEnqueuer(const size_t size)
     {
         const auto [loadedSize, loadedHead, loadedTail]{ GetSize() };
         const auto availableSize{Capacity - loadedSize - 1};
@@ -106,11 +68,11 @@ public:
         // 연속 구간에 대해 쓰기 가능하면 즉시 해당 위치 반환
         if (Capacity - loadedTail >= size) [[likely]]
         {
-            return std::make_optional<Enqueuer>(*this, false, ringBuffer_.get() + loadedTail, size);
+            return std::make_optional<ScopedBufferEnqueuer<SpscRingBuffer>>(this, ringBuffer_.get() + loadedTail, size);
         }
 
         // 불연속 구간인 경우 임시 버퍼에 대해 반환
-        return std::make_optional<Enqueuer>(*this, true, tempEnqueueBuffer_.get(), size);
+        return std::make_optional<ScopedBufferEnqueuer<SpscRingBuffer>>(this, tempEnqueueBuffer_.get(), size);
     }
 
     void Dequeue(const size_t size)
@@ -152,6 +114,21 @@ public:
         const auto size{ loadedTail >= loadedHead ? loadedTail - loadedHead : loadedTail + Capacity - loadedHead };
 
         return { size, loadedHead, loadedTail };
+    }
+
+    __forceinline void ReleaseEnqueueBuffer(const char* const buffer, const size_t bufferSize)
+    {
+        const auto [loadedSize, loadedHead, loadedTail]{GetSize()};
+        if (buffer == tempEnqueueBuffer_.get()) [[unlikely]]
+        {
+            const auto primarySize{ std::min<size_t>(bufferSize, Capacity - loadedTail) };
+            const auto secondarySize{ bufferSize - primarySize };
+            memcpy(ringBuffer_.get() + loadedTail, buffer, primarySize);
+            memcpy(ringBuffer_.get(), buffer + primarySize, secondarySize);
+
+        }
+
+        tail_.store((loadedTail + bufferSize) % Capacity, std::memory_order_release);
     }
 
 private:

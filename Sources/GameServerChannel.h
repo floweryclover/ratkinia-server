@@ -7,7 +7,7 @@
 
 #include "Channel.h"
 #include "Errors.h"
-#include "ScopedNetworkMessage.h"
+#include "ScopedBufferHandle.h"
 #include "MpscMessageBodyPool.h"
 #include "RatkiniaProtocol.gen.h"
 #include <memory>
@@ -15,28 +15,47 @@
 #include <array>
 #include <shared_mutex>
 
+class GameServerChannel;
+
+class GameServerChannelMessageDequeuer final
+{
+public:
+    const uint64_t Context;
+    const uint16_t MessageType;
+    const uint16_t BodySize;
+    const char* const Body;
+
+    explicit GameServerChannelMessageDequeuer(const uint64_t context,
+                                              const uint16_t messageType,
+                                              GameServerChannel* const owner,
+                                              char* const buffer,
+                                              const size_t bufferSize)
+        : Context{ context },
+          MessageType{ messageType },
+          BodySize{ static_cast<uint16_t>(bufferSize) },
+          Body{ buffer },
+          RawDequeuer{ owner, buffer, bufferSize }
+    {
+    }
+
+private:
+    const ScopedBufferDequeuer<GameServerChannel> RawDequeuer;
+};
+
 class GameServerChannel final : public CreateMpscChannelFromThis<GameServerChannel>
 {
 public:
-    struct PushMessage final
-    {
-        uint64_t SessionId;
-        uint16_t MessageType;
-        uint16_t BodySize;
-        const char* Body;
-    };
-
-    using PopMessageType = ScopedNetworkMessage<GameServerChannel>;
+    using PopMessageType = GameServerChannelMessageDequeuer;
 
     explicit GameServerChannel();
 
-    bool Push(PushMessage message);
+    bool Push(const uint64_t context, const uint16_t messageType, const uint16_t bodySize, const char* const body);
 
-    __forceinline void ReleaseScopedMessage(const PopMessageType& message)
+    __forceinline void ReleaseDequeueBuffer(const char* const buffer, const size_t bufferSize)
     {
-        if (message.Body)
+        if (buffer)
         {
-            pools_[1 - currentPushIndex_].Release(message.BodySize, message.Body);
+            pools_[1 - currentPushIndex_].Release(bufferSize, buffer);
         }
     }
 
@@ -56,7 +75,7 @@ public:
         }
         auto& popQueueMessage = popQueue.front();
 
-        const auto sessionId = popQueueMessage.SessionId;
+        const auto context = popQueueMessage.Context;
         const auto messageType = popQueueMessage.MessageType;
         const auto bodySize = popQueueMessage.BodySize;
         auto body = popQueueMessage.Body;
@@ -64,7 +83,7 @@ public:
         popQueue.pop();
         count_.fetch_sub(1, std::memory_order_release);
 
-        return std::make_optional<PopMessageType>(*this, sessionId, messageType, bodySize, body);
+        return std::make_optional<PopMessageType>(context, messageType, this, body, bodySize);
     }
 
     __forceinline bool Empty() const
@@ -75,7 +94,7 @@ public:
 private:
     struct QueueMessage final
     {
-        uint64_t SessionId;
+        uint64_t Context;
         uint16_t MessageType;
         uint16_t BodySize;
         char* Body;

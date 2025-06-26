@@ -6,16 +6,44 @@
 #define RATKINIASERVER_NETWORKSERVERCHANNEL_H
 
 #include "Channel.h"
-#include "ScopedNetworkMessage.h"
+#include "ScopedBufferHandle.h"
 #include "SpscRingBuffer.h"
 #include "RatkiniaProtocol.gen.h"
+#include <iostream>
+
+class NetworkServerChannel;
+
+class NetworkServerChannelMessageDequeuer final
+{
+public:
+    const uint64_t Context;
+    const uint16_t MessageType;
+    const uint16_t BodySize;
+    const char* const Body;
+
+    explicit NetworkServerChannelMessageDequeuer(const uint64_t context,
+                                                 const uint16_t messageType,
+                                                 NetworkServerChannel* const owner,
+                                                 const char* const buffer,
+                                                 const size_t bufferSize)
+        : Context{ context },
+          MessageType{ messageType },
+          BodySize{ static_cast<uint16_t>(bufferSize - 8 - 2 - 2) },
+          Body{ buffer + 8 + 2 + 2 },
+          RawDequeuer{ owner, buffer, bufferSize }
+    {
+    }
+
+private:
+    const ScopedBufferDequeuer<NetworkServerChannel> RawDequeuer;
+};
 
 class NetworkServerChannel final : public CreateSpscChannelFromThis<NetworkServerChannel>
 {
 public:
     static constexpr size_t BufferCapacity = 65536;
 
-    using PopMessageType = ScopedNetworkMessage<NetworkServerChannel>;
+    using PopMessageType = NetworkServerChannelMessageDequeuer;
 
     explicit NetworkServerChannel();
 
@@ -31,11 +59,10 @@ public:
             return false;
         }
 
-        memcpy(enqueuer->EnqueueBuffer, &context, 8);
-        memcpy(enqueuer->EnqueueBuffer + 8, &messageType, 2);
-        memcpy(enqueuer->EnqueueBuffer + 8 + 2, &messageSize, 2);
-        message.SerializeToArray(enqueuer->EnqueueBuffer + 8 + 2 + 2, messageSize);
-
+        memcpy(enqueuer->Buffer, &context, 8);
+        memcpy(enqueuer->Buffer + 8, &messageType, 2);
+        memcpy(enqueuer->Buffer + 8 + 2, &messageSize, 2);
+        message.SerializeToArray(enqueuer->Buffer + 8 + 2 + 2, messageSize);
         return true;
     }
 
@@ -53,19 +80,18 @@ public:
         memcpy(&context, *contextHeader, 8);
         memcpy(&messageType, *contextHeader + 8, 2);
         memcpy(&bodySize, *contextHeader + 8 + 2, 2);
-
         const auto fullBuffer{ ringBuffer_.TryPeek(8 + 2 + 2 + bodySize) };
         if (!fullBuffer) [[unlikely]]
         {
             return std::nullopt;
         }
 
-        return std::make_optional<ScopedNetworkMessage<NetworkServerChannel>>(*this, context, messageType, bodySize, *fullBuffer + 8 + 2 + 2);
+        return std::make_optional<NetworkServerChannelMessageDequeuer>(context, messageType, this, *fullBuffer, bodySize + 8 + 2 + 2);
     }
 
-    __forceinline void ReleaseScopedMessage(const PopMessageType& message)
+    __forceinline void ReleaseDequeueBuffer(const char* const /*buffer*/, const size_t bufferSize)
     {
-        ringBuffer_.Dequeue(8 + 2 + 2 + message.BodySize);
+        ringBuffer_.Dequeue(bufferSize);
     }
 
     __forceinline bool Empty()

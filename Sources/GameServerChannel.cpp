@@ -11,9 +11,9 @@ GameServerChannel::GameServerChannel()
 
 }
 
-bool GameServerChannel::Push(PushMessage message)
+bool GameServerChannel::Push(const uint64_t context, const uint16_t messageType, const uint16_t bodySize, const char* const body)
 {
-    if (message.BodySize > RatkiniaProtocol::MessageMaxSize - RatkiniaProtocol::MessageHeaderSize)
+    if (bodySize > RatkiniaProtocol::MessageMaxSize - RatkiniaProtocol::MessageHeaderSize)
     {
         return false;
     }
@@ -23,18 +23,18 @@ bool GameServerChannel::Push(PushMessage message)
     std::lock_guard producerLock{ producerMutex_ };
 
     QueueMessage queueMessage{};
-    queueMessage.SessionId = message.SessionId;
-    queueMessage.MessageType = message.MessageType;
-    queueMessage.BodySize = message.BodySize;
+    queueMessage.Context = context;
+    queueMessage.MessageType = messageType;
+    queueMessage.BodySize = bodySize;
 
-    if (message.BodySize > 0)
+    if (bodySize > 0)
     {
         auto& pool = pools_[currentPushIndex_];
 
-        auto block = pool.Acquire(message.BodySize);
+        auto block = pool.Acquire(bodySize);
         ERR_FAIL_NULL_V(block, false);
 
-        memcpy_s(block, message.BodySize, message.Body, message.BodySize);
+        memcpy_s(block, bodySize, body, bodySize);
         queueMessage.Body = block;
     }
 

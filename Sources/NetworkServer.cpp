@@ -235,6 +235,7 @@ void NetworkServer::ChannelReceiverThreadBody()
         {
             break;
         }
+
         networkServerReceiver_.Wait();
 
         std::lock_guard lock{ sessionsMutex_ };
@@ -243,7 +244,6 @@ void NetworkServer::ChannelReceiverThreadBody()
             const auto context{ message->Context };
             const auto messageType{ message->MessageType };
             const auto bodySize{ message->BodySize };
-
             if (!sessions_.contains(context))
             {
                 continue;
@@ -340,10 +340,7 @@ void NetworkServer::PostReceive(Session& session, const size_t bytesTransferred)
 
     while (session.TryPopMessage([&](auto sessionId, auto messageType, auto bodySize, auto body)
                                  {
-                                     return gameServerSender_.TrySend(GameServerChannel::PushMessage{ sessionId,
-                                                                                                      messageType,
-                                                                                                      bodySize,
-                                                                                                      body });
+                                     return gameServerSender_.TrySend(sessionId, messageType, bodySize, body);
                                  },
                                  [&](auto sessionId)
                                  {
