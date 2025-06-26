@@ -51,7 +51,7 @@ public:
         return newBlock->Body;
     }
 
-    __forceinline void Release(const size_t size, char* const body)
+    __forceinline void Release(const size_t size, const char* const body)
     {
         const auto [head, blockSize]{ GetMemoryBlockListHeadFor(size) };
         if (!head)
@@ -60,7 +60,7 @@ public:
             std::abort();
         }
 
-        const auto memoryBlockOfBuffer{ reinterpret_cast<MemoryBlock*>(body - offsetof(MemoryBlock, Body)) };
+        const auto memoryBlockOfBuffer{ reinterpret_cast<MemoryBlock*>(reinterpret_cast<size_t>(body - offsetof(MemoryBlock, Body))) };
 
         auto expected{ head->load(std::memory_order_acquire) };
         do

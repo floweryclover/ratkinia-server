@@ -1,0 +1,14 @@
+//
+// Created by floweryclover on 2025-06-26.
+//
+
+#ifndef RATKINIASERVER_SPSCNETWORKRINGBUFFER_H
+#define RATKINIASERVER_SPSCNETWORKRINGBUFFER_H
+
+class SpscNetworkRingBuffer
+{
+
+};
+
+
+#endif //RATKINIASERVER_SPSCNETWORKRINGBUFFER_H

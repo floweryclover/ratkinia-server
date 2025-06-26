@@ -16,7 +16,7 @@ public:
                                   const uint64_t context,
                                   const uint16_t messageType,
                                   const uint16_t bodySize,
-                                  char* const body)
+                                  const char* const body)
         : Context{ context },
           MessageType{ messageType },
           BodySize{ bodySize },
@@ -42,7 +42,7 @@ public:
     const uint64_t Context;
     const uint16_t MessageType;
     const uint16_t BodySize;
-    char* const Body;
+    const char* const Body;
 
 private:
     TOwner& owner_;

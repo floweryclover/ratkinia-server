@@ -3,3 +3,9 @@
 //
 
 #include "NetworkServerChannel.h"
+
+NetworkServerChannel::NetworkServerChannel()
+    : ringBuffer_{ BufferCapacity, RatkiniaProtocol::MessageMaxSize }
+{
+
+}
