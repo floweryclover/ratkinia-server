@@ -49,14 +49,14 @@ public:
         MpscSender& operator=(MpscSender&&) noexcept = default;
 
         template<typename ...Args>
-        bool TrySend(Args&& ...args)
+        bool TryPush(Args&& ...args)
         {
             if (channel_->Closed.load(std::memory_order_acquire))
             {
                 return false;
             }
 
-            const auto pushResult = channel_->Channel.Push(std::forward<Args>(args)...);
+            const auto pushResult = channel_->Channel.TryPush(std::forward<Args>(args)...);
             channel_->Version.fetch_add(1, std::memory_order_release);
             channel_->Version.notify_one();
             return pushResult;
@@ -69,8 +69,6 @@ public:
     class MpscReceiver final
     {
     public:
-        using PopMessageType = TChannel::PopMessageType;
-
         explicit MpscReceiver(std::shared_ptr<MpscChannel> channel)
             : channel_{ std::move(channel) }
         {
@@ -119,9 +117,14 @@ public:
             return channel_->Closed.load(std::memory_order_acquire);
         }
 
-        std::optional<PopMessageType> TryReceive()
+        typename TChannel::ChannelPeekOutputType TryPeek()
         {
-            return channel_->Channel.TryPop();
+            return channel_->Channel.TryPeek();
+        }
+
+        void Pop(TChannel::ChannelPopInputType popInput)
+        {
+            channel_->Channel.Pop(popInput);
         }
 
     private:
@@ -176,7 +179,7 @@ public:
         SpscSender& operator=(SpscSender&&) noexcept = default;
 
         template<typename ...Args>
-        bool TrySend(Args&& ...args)
+        bool TryPush(Args&& ...args)
         {
             if (channel_->Closed.load(std::memory_order_acquire))
             {
@@ -196,8 +199,6 @@ public:
     class SpscReceiver final
     {
     public:
-        using PopMessageType = TChannel::PopMessageType;
-
         explicit SpscReceiver(std::shared_ptr<SpscChannel> channel)
             : channel_{ std::move(channel) }
         {
@@ -246,9 +247,14 @@ public:
             return channel_->Closed.load(std::memory_order_acquire);
         }
 
-        std::optional<PopMessageType> TryReceive()
+        TChannel::ChannelPeekOutputType TryPeek()
         {
-            return channel_->Channel.TryPop();
+            return channel_->Channel.TryPeek();
+        }
+
+        void Pop(TChannel::ChannelPopInputType popInput)
+        {
+            channel_->Channel.Pop(popInput);
         }
 
     private:

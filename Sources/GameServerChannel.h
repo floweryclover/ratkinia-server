@@ -7,7 +7,6 @@
 
 #include "Channel.h"
 #include "Errors.h"
-#include "ScopedBufferHandle.h"
 #include "MpscMessageBodyPool.h"
 #include "RatkiniaProtocol.gen.h"
 #include <memory>
@@ -15,56 +14,30 @@
 #include <array>
 #include <shared_mutex>
 
-class GameServerChannel;
-
-class GameServerChannelMessageDequeuer final
-{
-public:
-    const uint64_t Context;
-    const uint16_t MessageType;
-    const uint16_t BodySize;
-    const char* const Body;
-
-    explicit GameServerChannelMessageDequeuer(const uint64_t context,
-                                              const uint16_t messageType,
-                                              GameServerChannel* const owner,
-                                              char* const buffer,
-                                              const size_t bufferSize)
-        : Context{ context },
-          MessageType{ messageType },
-          BodySize{ static_cast<uint16_t>(bufferSize) },
-          Body{ buffer },
-          RawDequeuer{ owner, buffer, bufferSize }
-    {
-    }
-
-private:
-    const ScopedBufferDequeuer<GameServerChannel> RawDequeuer;
-};
-
 class GameServerChannel final : public CreateMpscChannelFromThis<GameServerChannel>
 {
 public:
-    using PopMessageType = GameServerChannelMessageDequeuer;
+    struct QueueMessage final
+    {
+        const uint64_t Context{};
+        const uint16_t MessageType{};
+        const uint16_t BodySize{};
+        const char* const Body{};
+    };
+
+    using ChannelPeekOutputType = std::optional<QueueMessage>;
+    using ChannelPopInputType = const QueueMessage&;
 
     explicit GameServerChannel();
 
-    bool Push(const uint64_t context, const uint16_t messageType, const uint16_t bodySize, const char* const body);
-
-    __forceinline void ReleaseDequeueBuffer(const char* const buffer, const size_t bufferSize)
-    {
-        if (buffer)
-        {
-            pools_[1 - currentPushIndex_].Release(bufferSize, buffer);
-        }
-    }
+    bool TryPush(const uint64_t context, const uint16_t messageType, const uint16_t bodySize, const char* const body);
 
     /**
      * 소비자 스레드에서 호출.
      * @return
      */
     [[nodiscard]]
-    __forceinline std::optional<PopMessageType> TryPop()
+    __forceinline ChannelPeekOutputType TryPeek()
     {
         auto& popQueue = queues_[1 - currentPushIndex_];
         if (popQueue.empty())
@@ -80,10 +53,17 @@ public:
         const auto bodySize = popQueueMessage.BodySize;
         auto body = popQueueMessage.Body;
 
-        popQueue.pop();
-        count_.fetch_sub(1, std::memory_order_release);
+        return std::make_optional<QueueMessage>(context, messageType, bodySize, body);
+    }
 
-        return std::make_optional<PopMessageType>(context, messageType, this, body, bodySize);
+    __forceinline void Pop(ChannelPopInputType popInput)
+    {
+        if (popInput.Body)
+        {
+            pools_[1 - currentPushIndex_].Release(popInput.BodySize, popInput.Body);
+        }
+        queues_[1 - currentPushIndex_].pop();
+        count_.fetch_sub(1, std::memory_order_release);
     }
 
     __forceinline bool Empty() const
@@ -92,21 +72,15 @@ public:
     }
 
 private:
-    struct QueueMessage final
-    {
-        uint64_t Context;
-        uint16_t MessageType;
-        uint16_t BodySize;
-        char* Body;
-    };
 
     int currentPushIndex_;
 
-    std::atomic_size_t count_;
     MpscMessageBodyPool pools_[2];
     std::queue<QueueMessage> queues_[2];
     std::shared_mutex mutex_;
     std::mutex producerMutex_;
+
+    alignas(64) std::atomic_size_t count_;
 };
 
 #endif //RATKINIASERVER_GAMESERVERTERMINAL_H

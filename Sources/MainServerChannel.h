@@ -26,27 +26,30 @@ public:
 class MainServerChannel final : public CreateMpscChannelFromThis<MainServerChannel>
 {
 public:
-    using PushMessageType = std::unique_ptr<MainServerCommand>;
-    using PopMessageType = std::unique_ptr<MainServerCommand>;
+    using ChannelPeekOutputType = const MainServerCommand*;
+    using ChannelPopInputType = const MainServerCommand*;
 
-    bool Push(PushMessageType command)
+    bool TryPush(std::unique_ptr<MainServerCommand> command)
     {
         std::lock_guard lock{ mutex_ };
         commands_.emplace(std::move(command));
         return true;
     }
 
-    std::optional<PopMessageType> TryPop()
+    ChannelPeekOutputType TryPeek()
     {
         std::lock_guard lock{ mutex_ };
         if (commands_.empty())
         {
-            return std::nullopt;
+            return nullptr;
         }
 
-        auto returnValue{ std::move(commands_.front()) };
+        return commands_.front().get();
+    }
+
+    void Pop(ChannelPopInputType popInput)
+    {
         commands_.pop();
-        return std::move(returnValue);
     }
 
     bool Empty()

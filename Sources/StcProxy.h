@@ -19,7 +19,7 @@ public:
     {
         auto elapsedTime{0};
 
-        while (!networkServerSender_.TrySend(context, static_cast<uint16_t>(messageType), message))
+        while (!networkServerSender_.TryPush(context, static_cast<uint16_t>(messageType), message))
         {
             std::this_thread::sleep_for(std::chrono::milliseconds{1});
             elapsedTime += 1;
@@ -27,7 +27,7 @@ public:
 
         if (elapsedTime > 0)
         {
-            MessagePrinter::WriteErrorLine("NetworkServerSender::TrySend()에서", elapsedTime, "ms만큼 대기했습니다.");
+            MessagePrinter::WriteErrorLine("NetworkServerSender::TryPush()에서", elapsedTime, "ms만큼 대기했습니다.");
         }
     }
 

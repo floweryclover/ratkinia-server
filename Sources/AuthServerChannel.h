@@ -23,7 +23,7 @@
 //class AuthServerChannel final : public CreateSpscChannelFromThis<AuthServerChannel>
 //{
 //public:
-//    using PopMessageType = AuthServerMessage;
+//    using ChannelPeekOutputType = AuthServerMessage;
 //
 //    static constexpr size_t BufferCapacity{65536};
 //
@@ -41,7 +41,7 @@
 //        return true;
 //    }
 //
-//    __forceinline std::optional<AuthServerMessage> TryPop()
+//    __forceinline std::optional<AuthServerMessage> TryPeek()
 //    {
 //        const auto lock{std::lock_guard{mutex_}};
 //

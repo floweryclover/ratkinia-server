@@ -21,9 +21,10 @@ void MainServer::Run()
             break;
         }
 
-        if (const auto message = mainServerReceiver_.TryReceive())
+        if (const auto message = mainServerReceiver_.TryPeek())
         {
             MessagePrinter::WriteLine("MainServer Receiver Command");
+            mainServerReceiver_.Pop(message);
             break;
         }
     }

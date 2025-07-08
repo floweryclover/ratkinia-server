@@ -41,12 +41,13 @@ void GameServer::ThreadBody()
             break;
         }
 
-        while (const auto message = gameServerReceiver_.TryReceive())
+        while (const auto message = gameServerReceiver_.TryPeek())
         {
             ctsStub_.HandleCts(message->Context,
                                message->MessageType,
                                message->BodySize,
                                message->Body);
+            gameServerReceiver_.Pop(*message);
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds{ 16 });
@@ -55,5 +56,5 @@ void GameServer::ThreadBody()
 
 void GameServer::ShouldTerminate()
 {
-    mainServerSender_.TrySend(std::make_unique<ShutdownCommand>());
+    mainServerSender_.TryPush(std::make_unique<ShutdownCommand>());
 }

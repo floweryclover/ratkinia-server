@@ -47,7 +47,7 @@ void NetworkServer::Start(const std::string& listenAddress, unsigned short liste
     if (iocpHandle_ != nullptr)
     {
         ERR_PRINT_VARARGS("NetworkServer::Start()가 두 번 이상 호출되었습니다.");
-        mainServerSender_.TrySend(std::make_unique<ShutdownCommand>());
+        mainServerSender_.TryPush(std::make_unique<ShutdownCommand>());
         return;
     }
 
@@ -55,7 +55,7 @@ void NetworkServer::Start(const std::string& listenAddress, unsigned short liste
     if (iocpHandle_ == nullptr)
     {
         ERR_PRINT_VARARGS("IOCP 핸들 생성에 실패하였습니다.");
-        mainServerSender_.TrySend(std::make_unique<ShutdownCommand>());
+        mainServerSender_.TryPush(std::make_unique<ShutdownCommand>());
         return;
     }
 
@@ -71,7 +71,7 @@ void NetworkServer::Start(const std::string& listenAddress, unsigned short liste
     if (inet_pton(AF_INET, listenAddress.c_str(), &sockaddrIn.sin_addr) != 1)
     {
         ERR_PRINT_VARARGS("IP 문자열 변환에 실패하였습니다:", listenAddress);
-        mainServerSender_.TrySend(std::make_unique<ShutdownCommand>());
+        mainServerSender_.TryPush(std::make_unique<ShutdownCommand>());
         return;
     }
 
@@ -79,7 +79,7 @@ void NetworkServer::Start(const std::string& listenAddress, unsigned short liste
     if (listenSocket_ == INVALID_SOCKET)
     {
         ERR_PRINT_VARARGS("리슨 소켓 생성에 실패하였습니다: ", WSAGetLastError());
-        mainServerSender_.TrySend(std::make_unique<ShutdownCommand>());
+        mainServerSender_.TryPush(std::make_unique<ShutdownCommand>());
         return;
     }
 
@@ -89,7 +89,7 @@ void NetworkServer::Start(const std::string& listenAddress, unsigned short liste
                                           0))
     {
         ERR_PRINT_VARARGS("리슨 소켓을 IOCP 핸들에 연결시키는 작업에 실패하였습니다: ", GetLastError());
-        mainServerSender_.TrySend(std::make_unique<ShutdownCommand>());
+        mainServerSender_.TryPush(std::make_unique<ShutdownCommand>());
     }
 
     int option = 1;
@@ -100,7 +100,7 @@ void NetworkServer::Start(const std::string& listenAddress, unsigned short liste
                                    sizeof(option)))
     {
         ERR_PRINT_VARARGS("리슨 소켓 SO_REUSEADDR 설정에 실패하였습니다:", WSAGetLastError());
-        mainServerSender_.TrySend(std::make_unique<ShutdownCommand>());
+        mainServerSender_.TryPush(std::make_unique<ShutdownCommand>());
         return;
     }
     if (SOCKET_ERROR == setsockopt(listenSocket_,
@@ -110,21 +110,21 @@ void NetworkServer::Start(const std::string& listenAddress, unsigned short liste
                                    sizeof(option)))
     {
         ERR_PRINT_VARARGS("리슨 소켓 TCP_NODELAY 설정에 실패하였습니다:", WSAGetLastError());
-        mainServerSender_.TrySend(std::make_unique<ShutdownCommand>());
+        mainServerSender_.TryPush(std::make_unique<ShutdownCommand>());
         return;
     }
 
     if (bind(listenSocket_, reinterpret_cast<sockaddr*>(&sockaddrIn), sizeof(SOCKADDR_IN)))
     {
         ERR_PRINT_VARARGS("리슨 소켓 바인딩에 실패하였습니다:", WSAGetLastError());
-        mainServerSender_.TrySend(std::make_unique<ShutdownCommand>());
+        mainServerSender_.TryPush(std::make_unique<ShutdownCommand>());
         return;
     }
 
     if (listen(listenSocket_, AcceptPoolSize))
     {
         ERR_PRINT_VARARGS("리슨 소켓 listen()에 실패하였습니다:", WSAGetLastError());
-        mainServerSender_.TrySend(std::make_unique<ShutdownCommand>());
+        mainServerSender_.TryPush(std::make_unique<ShutdownCommand>());
         return;
     }
 
@@ -239,16 +239,16 @@ void NetworkServer::ChannelReceiverThreadBody()
         networkServerReceiver_.Wait();
 
         std::lock_guard lock{ sessionsMutex_ };
-        while (const auto message = networkServerReceiver_.TryReceive())
+        while (const auto message = networkServerReceiver_.TryPeek())
         {
             const auto context{ message->Context };
             const auto messageType{ message->MessageType };
             const auto bodySize{ message->BodySize };
             if (!sessions_.contains(context))
             {
+                networkServerReceiver_.Pop(*message);
                 continue;
             }
-
             Session& session{ sessions_.at(context) };
             RatkiniaProtocol::MessageHeader header{};
             header.MessageType = htons(messageType);
@@ -259,6 +259,7 @@ void NetworkServer::ChannelReceiverThreadBody()
             {
                 DisconnectSession(context);
             }
+            networkServerReceiver_.Pop(*message);
         }
     }
 
@@ -285,7 +286,7 @@ void NetworkServer::AcceptAsync()
     if (!acceptContext)
     {
         ERR_PRINT_VARARGS("AcceptContext 확보에 실패하였습니다.");
-        mainServerSender_.TrySend(std::make_unique<ShutdownCommand>());
+        mainServerSender_.TryPush(std::make_unique<ShutdownCommand>());
         return;
     }
     ZeroMemory(acceptContext, sizeof(AcceptContext));
@@ -296,7 +297,7 @@ void NetworkServer::AcceptAsync()
     if (clientSocket == INVALID_SOCKET)
     {
         ERR_PRINT_VARARGS("Accept 소켓 생성에 실패하였습니다:", WSAGetLastError());
-        mainServerSender_.TrySend(std::make_unique<ShutdownCommand>());
+        mainServerSender_.TryPush(std::make_unique<ShutdownCommand>());
         return;
     }
 
@@ -310,7 +311,7 @@ void NetworkServer::AcceptAsync()
     {
         acceptContext->SessionId = NullSessionId;
         DisconnectSession(sessionId);
-        mainServerSender_.TrySend(std::make_unique<ShutdownCommand>());
+        mainServerSender_.TryPush(std::make_unique<ShutdownCommand>());
         return;
     }
 }
@@ -340,12 +341,12 @@ void NetworkServer::PostReceive(Session& session, const size_t bytesTransferred)
 
     while (session.TryPopMessage([&](auto sessionId, auto messageType, auto bodySize, auto body)
                                  {
-                                     return gameServerSender_.TrySend(sessionId, messageType, bodySize, body);
+                                     return gameServerSender_.TryPush(sessionId, messageType, bodySize, body);
                                  },
                                  [&](auto sessionId)
                                  {
                                      MessagePrinter::WriteErrorLine("NetworkServer -> GameServer 메시지 큐 Push에 실패하였습니다:", sessionId);
-                                     mainServerSender_.TrySend(std::make_unique<ShutdownCommand>());
+                                     mainServerSender_.TryPush(std::make_unique<ShutdownCommand>());
                                  }));
     if (!session.TryReceiveAsync())
     {

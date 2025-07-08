@@ -5,7 +5,6 @@
 #ifndef RATKINIASERVER_SPSCRINGBUFFER_H
 #define RATKINIASERVER_SPSCRINGBUFFER_H
 
-#include "ScopedBufferHandle.h"
 #include <atomic>
 #include <optional>
 #include <memory>
@@ -15,6 +14,15 @@
  */
 class alignas(64) SpscRingBuffer final
 {
+private:
+    struct BufferStatus
+    {
+        size_t LoadedHead{};
+        size_t LoadedTail{};
+        size_t Size{};
+        size_t AvailableSize{};
+    };
+
 public:
     const size_t Capacity;
     const size_t MaxBlockSize;
@@ -36,43 +44,40 @@ public:
 
     SpscRingBuffer& operator=(SpscRingBuffer&&) = delete;
 
-    __forceinline bool TryEnqueue(const char* const data, const size_t size)
+    template<typename T>
+    __forceinline bool TryEnqueue(const T& data, const size_t size)
     {
-        const auto [loadedSize, loadedHead, loadedTail]{ GetSize() };
-        const auto availableSize{ Capacity - loadedSize - 1 };
-
-        if (availableSize < size) [[unlikely]]
+        const auto bufferStatus = GetBufferStatus();
+        if (bufferStatus.AvailableSize < size) [[unlikely]]
         {
             return false;
         }
 
-        const auto primarySize{ std::min<size_t>(size, Capacity - loadedTail) };
+        const auto primarySize{ std::min<size_t>(size, Capacity - bufferStatus.LoadedTail) };
         const auto secondarySize{ size - primarySize };
-        memcpy(ringBuffer_.get() + loadedTail, data, primarySize);
-        memcpy(ringBuffer_.get(), data + primarySize, secondarySize);
 
-        tail_.store((loadedTail + size) % Capacity, std::memory_order_release);
+        if constexpr (std::is_convertible_v<T, const char*>)
+        {
+            memcpy(ringBuffer_.get() + bufferStatus.LoadedTail, data, primarySize);
+            memcpy(ringBuffer_.get(), reinterpret_cast<const char*>(data) + primarySize, secondarySize);
+        }
+        else
+        {
+            if (secondarySize == 0) [[likely]]
+            {
+                data.SerializeToArray(ringBuffer_.get() + bufferStatus.LoadedTail, size);
+            }
+            else [[unlikely]]
+            {
+                data.SerializeToArray(tempEnqueueBuffer_.get(), size);
+                memcpy(ringBuffer_.get() + bufferStatus.LoadedTail, tempEnqueueBuffer_.get(), primarySize);
+                memcpy(ringBuffer_.get(), tempEnqueueBuffer_.get() + primarySize, secondarySize);
+            }
+        }
+
+        tail_.store((bufferStatus.LoadedTail + size) % Capacity, std::memory_order_release);
 
         return true;
-    }
-
-    __forceinline std::optional<ScopedBufferEnqueuer<SpscRingBuffer>> TryGetEnqueuer(const size_t size)
-    {
-        const auto [loadedSize, loadedHead, loadedTail]{ GetSize() };
-        const auto availableSize{Capacity - loadedSize - 1};
-        if (availableSize < size) [[unlikely]]
-        {
-            return std::nullopt;
-        }
-
-        // 연속 구간에 대해 쓰기 가능하면 즉시 해당 위치 반환
-        if (Capacity - loadedTail >= size) [[likely]]
-        {
-            return std::make_optional<ScopedBufferEnqueuer<SpscRingBuffer>>(this, ringBuffer_.get() + loadedTail, size);
-        }
-
-        // 불연속 구간인 경우 임시 버퍼에 대해 반환
-        return std::make_optional<ScopedBufferEnqueuer<SpscRingBuffer>>(this, tempEnqueueBuffer_.get(), size);
     }
 
     void Dequeue(const size_t size)
@@ -82,62 +87,54 @@ public:
 
     __forceinline std::optional<const char*> TryPeek(const size_t size)
     {
-        const auto [bufferSize, loadedHead, loadedTail]{ GetSize() };
-        if (bufferSize < size)
+        const auto bufferStatus = GetBufferStatus();
+        if (bufferStatus.Size < size)
         {
             return std::nullopt;
         }
 
-        if (Capacity - loadedHead >= size) [[likely]] // 연속 구간이면 그대로 반환
+        if (Capacity - bufferStatus.LoadedHead >= size) [[likely]] // 연속 구간이면 그대로 반환
         {
-            return ringBuffer_.get() + loadedHead;
+            return ringBuffer_.get() + bufferStatus.LoadedHead;
         }
 
         // 불연속 구간이면 임시 버퍼에 복사 후 반환
-        const auto primarySize{ Capacity - loadedHead };
+        const auto primarySize{ Capacity - bufferStatus.LoadedHead };
         const auto secondarySize{ size - primarySize };
-        memcpy(tempDequeueBuffer_.get(), ringBuffer_.get() + loadedHead, primarySize);
+        memcpy(tempDequeueBuffer_.get(), ringBuffer_.get() + bufferStatus.LoadedHead, primarySize);
         memcpy(tempDequeueBuffer_.get() + primarySize, ringBuffer_.get(), secondarySize);
 
         return tempDequeueBuffer_.get();
     }
 
-    /**
-     *
-     * @return [size, loadedHead, loadedTail] 잦은 atomic load 방지를 위해 head, tail도 같이 반환.
-     */
-    __forceinline std::tuple<size_t, size_t, size_t> GetSize() const
+    __forceinline size_t GetAvailableSize() const
+    {
+        return GetBufferStatus().AvailableSize;
+    }
+
+
+    __forceinline size_t GetSize() const
+    {
+        return GetBufferStatus().Size;
+    }
+
+private:
+    std::unique_ptr<char[]> ringBuffer_;
+    std::unique_ptr<char[]> tempDequeueBuffer_;
+    std::unique_ptr<char[]> tempEnqueueBuffer_;
+
+    alignas(64) std::atomic<size_t> head_{}; // inclusive
+    alignas(64) std::atomic<size_t> tail_{}; // exclusive, head_와 동일하면 empty.
+
+    __forceinline BufferStatus GetBufferStatus() const
     {
         const auto loadedHead{ head_.load(std::memory_order_acquire) };
         const auto loadedTail{ tail_.load(std::memory_order_acquire) };
 
         const auto size{ loadedTail >= loadedHead ? loadedTail - loadedHead : loadedTail + Capacity - loadedHead };
 
-        return { size, loadedHead, loadedTail };
+        return { loadedHead, loadedTail, size, Capacity - size - 1 };
     }
-
-    __forceinline void ReleaseEnqueueBuffer(const char* const buffer, const size_t bufferSize)
-    {
-        const auto [loadedSize, loadedHead, loadedTail]{GetSize()};
-        if (buffer == tempEnqueueBuffer_.get()) [[unlikely]]
-        {
-            const auto primarySize{ std::min<size_t>(bufferSize, Capacity - loadedTail) };
-            const auto secondarySize{ bufferSize - primarySize };
-            memcpy(ringBuffer_.get() + loadedTail, buffer, primarySize);
-            memcpy(ringBuffer_.get(), buffer + primarySize, secondarySize);
-
-        }
-
-        tail_.store((loadedTail + bufferSize) % Capacity, std::memory_order_release);
-    }
-
-private:
-    alignas(64) std::unique_ptr<char[]> ringBuffer_;
-    alignas(64) std::unique_ptr<char[]> tempDequeueBuffer_;
-    alignas(64) std::unique_ptr<char[]> tempEnqueueBuffer_;
-
-    alignas(64) std::atomic<size_t> head_{}; // inclusive
-    alignas(64) std::atomic<size_t> tail_{}; // exclusive, head_와 동일하면 empty.
 };
 
 #endif //RATKINIASERVER_SPSCRINGBUFFER_H
