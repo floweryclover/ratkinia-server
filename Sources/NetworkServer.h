@@ -32,11 +32,11 @@ public:
 
 
 private:
-    static constexpr uint64_t NullSessionId = 0xffffffffffffffff;
+    static constexpr uint32_t NullSessionId = 0xffffffff;
     struct AcceptContext final
     {
         OverlappedEx Context{};
-        uint64_t SessionId{};
+        uint32_t SessionId{};
     };
 
     static constexpr int AcceptPoolSize = 1;
@@ -50,8 +50,8 @@ private:
     HANDLE iocpHandle_;
     std::atomic_bool shouldStop_;
 
-    uint64_t newSessionId_;
-    std::unordered_map<uint64_t, Session> sessions_;
+    uint32_t newSessionId_;
+    std::unordered_map<uint32_t, Session> sessions_;
     std::mutex sessionsMutex_;
     std::unique_ptr<AcceptContext[]> acceptContexts_;
 
@@ -70,7 +70,7 @@ private:
 
     void PostSend(Session& session, size_t bytesTransferred);
 
-    void DisconnectSession(uint64_t sessionId);
+    void DisconnectSession(uint32_t sessionId);
 };
 
 #endif //NETWORKSERVER_H

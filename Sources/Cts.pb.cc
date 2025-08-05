@@ -27,7 +27,7 @@ inline constexpr RegisterRequest::Impl_::Impl_(
       : id_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
-        hashed_password_(
+        password_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
         _cached_size_{0} {}
@@ -51,7 +51,7 @@ inline constexpr LoginRequest::Impl_::Impl_(
       : id_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
-        hashed_password_(
+        password_(
             &::google::protobuf::internal::fixed_address_empty_string,
             ::_pbi::ConstantInitialized()),
         _cached_size_{0} {}
@@ -86,7 +86,7 @@ inline PROTOBUF_NDEBUG_INLINE LoginRequest::Impl_::Impl_(
     ::google::protobuf::internal::InternalVisibility visibility, ::google::protobuf::Arena* arena,
     const Impl_& from, const ::RatkiniaProtocol::LoginRequest& from_msg)
       : id_(arena, from.id_),
-        hashed_password_(arena, from.hashed_password_),
+        password_(arena, from.password_),
         _cached_size_{0} {}
 
 LoginRequest::LoginRequest(
@@ -105,7 +105,7 @@ inline PROTOBUF_NDEBUG_INLINE LoginRequest::Impl_::Impl_(
     ::google::protobuf::internal::InternalVisibility visibility,
     ::google::protobuf::Arena* arena)
       : id_(arena),
-        hashed_password_(arena),
+        password_(arena),
         _cached_size_{0} {}
 
 inline void LoginRequest::SharedCtor(::_pb::Arena* arena) {
@@ -119,7 +119,7 @@ LoginRequest::~LoginRequest() {
 inline void LoginRequest::SharedDtor() {
   ABSL_DCHECK(GetArena() == nullptr);
   _impl_.id_.Destroy();
-  _impl_.hashed_password_.Destroy();
+  _impl_.password_.Destroy();
   _impl_.~Impl_();
 }
 
@@ -140,7 +140,7 @@ LoginRequest::GetClassData() const {
   return _data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<1, 2, 0, 55, 2> LoginRequest::_table_ = {
+const ::_pbi::TcParseTable<1, 2, 0, 48, 2> LoginRequest::_table_ = {
   {
     0,  // no _has_bits_
     0, // no _extensions_
@@ -158,9 +158,9 @@ const ::_pbi::TcParseTable<1, 2, 0, 55, 2> LoginRequest::_table_ = {
     ::_pbi::TcParser::GetTable<::RatkiniaProtocol::LoginRequest>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    // string hashed_password = 2;
+    // string password = 2;
     {::_pbi::TcParser::FastUS1,
-     {18, 63, 0, PROTOBUF_FIELD_OFFSET(LoginRequest, _impl_.hashed_password_)}},
+     {18, 63, 0, PROTOBUF_FIELD_OFFSET(LoginRequest, _impl_.password_)}},
     // string id = 1;
     {::_pbi::TcParser::FastUS1,
      {10, 63, 0, PROTOBUF_FIELD_OFFSET(LoginRequest, _impl_.id_)}},
@@ -170,16 +170,16 @@ const ::_pbi::TcParseTable<1, 2, 0, 55, 2> LoginRequest::_table_ = {
     // string id = 1;
     {PROTOBUF_FIELD_OFFSET(LoginRequest, _impl_.id_), 0, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUtf8String | ::_fl::kRepAString)},
-    // string hashed_password = 2;
-    {PROTOBUF_FIELD_OFFSET(LoginRequest, _impl_.hashed_password_), 0, 0,
+    // string password = 2;
+    {PROTOBUF_FIELD_OFFSET(LoginRequest, _impl_.password_), 0, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUtf8String | ::_fl::kRepAString)},
   }},
   // no aux_entries
   {{
-    "\35\2\17\0\0\0\0\0"
+    "\35\2\10\0\0\0\0\0"
     "RatkiniaProtocol.LoginRequest"
     "id"
-    "hashed_password"
+    "password"
   }},
 };
 
@@ -191,7 +191,7 @@ PROTOBUF_NOINLINE void LoginRequest::Clear() {
   (void) cached_has_bits;
 
   _impl_.id_.ClearToEmpty();
-  _impl_.hashed_password_.ClearToEmpty();
+  _impl_.password_.ClearToEmpty();
   _internal_metadata_.Clear<std::string>();
 }
 
@@ -210,11 +210,11 @@ PROTOBUF_NOINLINE void LoginRequest::Clear() {
     target = stream->WriteStringMaybeAliased(1, _s, target);
   }
 
-  // string hashed_password = 2;
-  if (!this->_internal_hashed_password().empty()) {
-    const std::string& _s = this->_internal_hashed_password();
+  // string password = 2;
+  if (!this->_internal_password().empty()) {
+    const std::string& _s = this->_internal_password();
     ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
-        _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "RatkiniaProtocol.LoginRequest.hashed_password");
+        _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "RatkiniaProtocol.LoginRequest.password");
     target = stream->WriteStringMaybeAliased(2, _s, target);
   }
 
@@ -242,10 +242,10 @@ PROTOBUF_NOINLINE void LoginRequest::Clear() {
                                     this->_internal_id());
   }
 
-  // string hashed_password = 2;
-  if (!this->_internal_hashed_password().empty()) {
+  // string password = 2;
+  if (!this->_internal_password().empty()) {
     total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
-                                    this->_internal_hashed_password());
+                                    this->_internal_password());
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -271,8 +271,8 @@ void LoginRequest::MergeFrom(const LoginRequest& from) {
   if (!from._internal_id().empty()) {
     _this->_internal_set_id(from._internal_id());
   }
-  if (!from._internal_hashed_password().empty()) {
-    _this->_internal_set_hashed_password(from._internal_hashed_password());
+  if (!from._internal_password().empty()) {
+    _this->_internal_set_password(from._internal_password());
   }
   _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
 }
@@ -291,7 +291,7 @@ void LoginRequest::InternalSwap(LoginRequest* PROTOBUF_RESTRICT other) {
   ABSL_DCHECK_EQ(arena, other->GetArena());
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.id_, &other->_impl_.id_, arena);
-  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.hashed_password_, &other->_impl_.hashed_password_, arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.password_, &other->_impl_.password_, arena);
 }
 
 // ===================================================================
@@ -309,7 +309,7 @@ inline PROTOBUF_NDEBUG_INLINE RegisterRequest::Impl_::Impl_(
     ::google::protobuf::internal::InternalVisibility visibility, ::google::protobuf::Arena* arena,
     const Impl_& from, const ::RatkiniaProtocol::RegisterRequest& from_msg)
       : id_(arena, from.id_),
-        hashed_password_(arena, from.hashed_password_),
+        password_(arena, from.password_),
         _cached_size_{0} {}
 
 RegisterRequest::RegisterRequest(
@@ -328,7 +328,7 @@ inline PROTOBUF_NDEBUG_INLINE RegisterRequest::Impl_::Impl_(
     ::google::protobuf::internal::InternalVisibility visibility,
     ::google::protobuf::Arena* arena)
       : id_(arena),
-        hashed_password_(arena),
+        password_(arena),
         _cached_size_{0} {}
 
 inline void RegisterRequest::SharedCtor(::_pb::Arena* arena) {
@@ -342,7 +342,7 @@ RegisterRequest::~RegisterRequest() {
 inline void RegisterRequest::SharedDtor() {
   ABSL_DCHECK(GetArena() == nullptr);
   _impl_.id_.Destroy();
-  _impl_.hashed_password_.Destroy();
+  _impl_.password_.Destroy();
   _impl_.~Impl_();
 }
 
@@ -363,7 +363,7 @@ RegisterRequest::GetClassData() const {
   return _data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<1, 2, 0, 58, 2> RegisterRequest::_table_ = {
+const ::_pbi::TcParseTable<1, 2, 0, 51, 2> RegisterRequest::_table_ = {
   {
     0,  // no _has_bits_
     0, // no _extensions_
@@ -381,9 +381,9 @@ const ::_pbi::TcParseTable<1, 2, 0, 58, 2> RegisterRequest::_table_ = {
     ::_pbi::TcParser::GetTable<::RatkiniaProtocol::RegisterRequest>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    // string hashed_password = 2;
+    // string password = 2;
     {::_pbi::TcParser::FastUS1,
-     {18, 63, 0, PROTOBUF_FIELD_OFFSET(RegisterRequest, _impl_.hashed_password_)}},
+     {18, 63, 0, PROTOBUF_FIELD_OFFSET(RegisterRequest, _impl_.password_)}},
     // string id = 1;
     {::_pbi::TcParser::FastUS1,
      {10, 63, 0, PROTOBUF_FIELD_OFFSET(RegisterRequest, _impl_.id_)}},
@@ -393,16 +393,16 @@ const ::_pbi::TcParseTable<1, 2, 0, 58, 2> RegisterRequest::_table_ = {
     // string id = 1;
     {PROTOBUF_FIELD_OFFSET(RegisterRequest, _impl_.id_), 0, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUtf8String | ::_fl::kRepAString)},
-    // string hashed_password = 2;
-    {PROTOBUF_FIELD_OFFSET(RegisterRequest, _impl_.hashed_password_), 0, 0,
+    // string password = 2;
+    {PROTOBUF_FIELD_OFFSET(RegisterRequest, _impl_.password_), 0, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUtf8String | ::_fl::kRepAString)},
   }},
   // no aux_entries
   {{
-    "\40\2\17\0\0\0\0\0"
+    "\40\2\10\0\0\0\0\0"
     "RatkiniaProtocol.RegisterRequest"
     "id"
-    "hashed_password"
+    "password"
   }},
 };
 
@@ -414,7 +414,7 @@ PROTOBUF_NOINLINE void RegisterRequest::Clear() {
   (void) cached_has_bits;
 
   _impl_.id_.ClearToEmpty();
-  _impl_.hashed_password_.ClearToEmpty();
+  _impl_.password_.ClearToEmpty();
   _internal_metadata_.Clear<std::string>();
 }
 
@@ -433,11 +433,11 @@ PROTOBUF_NOINLINE void RegisterRequest::Clear() {
     target = stream->WriteStringMaybeAliased(1, _s, target);
   }
 
-  // string hashed_password = 2;
-  if (!this->_internal_hashed_password().empty()) {
-    const std::string& _s = this->_internal_hashed_password();
+  // string password = 2;
+  if (!this->_internal_password().empty()) {
+    const std::string& _s = this->_internal_password();
     ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
-        _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "RatkiniaProtocol.RegisterRequest.hashed_password");
+        _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "RatkiniaProtocol.RegisterRequest.password");
     target = stream->WriteStringMaybeAliased(2, _s, target);
   }
 
@@ -465,10 +465,10 @@ PROTOBUF_NOINLINE void RegisterRequest::Clear() {
                                     this->_internal_id());
   }
 
-  // string hashed_password = 2;
-  if (!this->_internal_hashed_password().empty()) {
+  // string password = 2;
+  if (!this->_internal_password().empty()) {
     total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
-                                    this->_internal_hashed_password());
+                                    this->_internal_password());
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -494,8 +494,8 @@ void RegisterRequest::MergeFrom(const RegisterRequest& from) {
   if (!from._internal_id().empty()) {
     _this->_internal_set_id(from._internal_id());
   }
-  if (!from._internal_hashed_password().empty()) {
-    _this->_internal_set_hashed_password(from._internal_hashed_password());
+  if (!from._internal_password().empty()) {
+    _this->_internal_set_password(from._internal_password());
   }
   _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
 }
@@ -514,7 +514,7 @@ void RegisterRequest::InternalSwap(RegisterRequest* PROTOBUF_RESTRICT other) {
   ABSL_DCHECK_EQ(arena, other->GetArena());
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.id_, &other->_impl_.id_, arena);
-  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.hashed_password_, &other->_impl_.hashed_password_, arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.password_, &other->_impl_.password_, arena);
 }
 
 // @@protoc_insertion_point(namespace_scope)

@@ -19,7 +19,7 @@ class GameServerChannel final : public CreateMpscChannelFromThis<GameServerChann
 public:
     struct QueueMessage final
     {
-        const uint64_t Context{};
+        const uint32_t Context{};
         const uint16_t MessageType{};
         const uint16_t BodySize{};
         const char* const Body{};
@@ -30,14 +30,14 @@ public:
 
     explicit GameServerChannel();
 
-    bool TryPush(const uint64_t context, const uint16_t messageType, const uint16_t bodySize, const char* const body);
+    bool TryPush(uint32_t context, uint16_t messageType, uint16_t bodySize, const char* body);
 
     /**
      * 소비자 스레드에서 호출.
      * @return
      */
     [[nodiscard]]
-    __forceinline ChannelPeekOutputType TryPeek()
+    ChannelPeekOutputType TryPeek()
     {
         auto& popQueue = queues_[1 - currentPushIndex_];
         if (popQueue.empty())
@@ -56,7 +56,7 @@ public:
         return std::make_optional<QueueMessage>(context, messageType, bodySize, body);
     }
 
-    __forceinline void Pop(ChannelPopInputType popInput)
+    void Pop(ChannelPopInputType popInput)
     {
         if (popInput.Body)
         {
@@ -66,7 +66,7 @@ public:
         count_.fetch_sub(1, std::memory_order_release);
     }
 
-    __forceinline bool Empty() const
+    bool Empty() const
     {
         return count_.load(std::memory_order_acquire) == 0;
     }

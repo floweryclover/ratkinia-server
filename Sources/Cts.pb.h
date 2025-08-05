@@ -173,7 +173,7 @@ class RegisterRequest final : public ::google::protobuf::MessageLite
   // accessors -------------------------------------------------------
   enum : int {
     kIdFieldNumber = 1,
-    kHashedPasswordFieldNumber = 2,
+    kPasswordFieldNumber = 2,
   };
   // string id = 1;
   void clear_id() ;
@@ -191,20 +191,20 @@ class RegisterRequest final : public ::google::protobuf::MessageLite
   std::string* _internal_mutable_id();
 
   public:
-  // string hashed_password = 2;
-  void clear_hashed_password() ;
-  const std::string& hashed_password() const;
+  // string password = 2;
+  void clear_password() ;
+  const std::string& password() const;
   template <typename Arg_ = const std::string&, typename... Args_>
-  void set_hashed_password(Arg_&& arg, Args_... args);
-  std::string* mutable_hashed_password();
-  PROTOBUF_NODISCARD std::string* release_hashed_password();
-  void set_allocated_hashed_password(std::string* value);
+  void set_password(Arg_&& arg, Args_... args);
+  std::string* mutable_password();
+  PROTOBUF_NODISCARD std::string* release_password();
+  void set_allocated_password(std::string* value);
 
   private:
-  const std::string& _internal_hashed_password() const;
-  inline PROTOBUF_ALWAYS_INLINE void _internal_set_hashed_password(
+  const std::string& _internal_password() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_password(
       const std::string& value);
-  std::string* _internal_mutable_hashed_password();
+  std::string* _internal_mutable_password();
 
   public:
   // @@protoc_insertion_point(class_scope:RatkiniaProtocol.RegisterRequest)
@@ -213,7 +213,7 @@ class RegisterRequest final : public ::google::protobuf::MessageLite
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
       1, 2, 0,
-      58, 2>
+      51, 2>
       _table_;
 
   static constexpr const void* _raw_default_instance_ =
@@ -234,7 +234,7 @@ class RegisterRequest final : public ::google::protobuf::MessageLite
                           ::google::protobuf::Arena* arena, const Impl_& from,
                           const RegisterRequest& from_msg);
     ::google::protobuf::internal::ArenaStringPtr id_;
-    ::google::protobuf::internal::ArenaStringPtr hashed_password_;
+    ::google::protobuf::internal::ArenaStringPtr password_;
     mutable ::google::protobuf::internal::CachedSize _cached_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -351,7 +351,7 @@ class LoginRequest final : public ::google::protobuf::MessageLite
   // accessors -------------------------------------------------------
   enum : int {
     kIdFieldNumber = 1,
-    kHashedPasswordFieldNumber = 2,
+    kPasswordFieldNumber = 2,
   };
   // string id = 1;
   void clear_id() ;
@@ -369,20 +369,20 @@ class LoginRequest final : public ::google::protobuf::MessageLite
   std::string* _internal_mutable_id();
 
   public:
-  // string hashed_password = 2;
-  void clear_hashed_password() ;
-  const std::string& hashed_password() const;
+  // string password = 2;
+  void clear_password() ;
+  const std::string& password() const;
   template <typename Arg_ = const std::string&, typename... Args_>
-  void set_hashed_password(Arg_&& arg, Args_... args);
-  std::string* mutable_hashed_password();
-  PROTOBUF_NODISCARD std::string* release_hashed_password();
-  void set_allocated_hashed_password(std::string* value);
+  void set_password(Arg_&& arg, Args_... args);
+  std::string* mutable_password();
+  PROTOBUF_NODISCARD std::string* release_password();
+  void set_allocated_password(std::string* value);
 
   private:
-  const std::string& _internal_hashed_password() const;
-  inline PROTOBUF_ALWAYS_INLINE void _internal_set_hashed_password(
+  const std::string& _internal_password() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_password(
       const std::string& value);
-  std::string* _internal_mutable_hashed_password();
+  std::string* _internal_mutable_password();
 
   public:
   // @@protoc_insertion_point(class_scope:RatkiniaProtocol.LoginRequest)
@@ -391,7 +391,7 @@ class LoginRequest final : public ::google::protobuf::MessageLite
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
       1, 2, 0,
-      55, 2>
+      48, 2>
       _table_;
 
   static constexpr const void* _raw_default_instance_ =
@@ -412,7 +412,7 @@ class LoginRequest final : public ::google::protobuf::MessageLite
                           ::google::protobuf::Arena* arena, const Impl_& from,
                           const LoginRequest& from_msg);
     ::google::protobuf::internal::ArenaStringPtr id_;
-    ::google::protobuf::internal::ArenaStringPtr hashed_password_;
+    ::google::protobuf::internal::ArenaStringPtr password_;
     mutable ::google::protobuf::internal::CachedSize _cached_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -486,54 +486,54 @@ inline void LoginRequest::set_allocated_id(std::string* value) {
   // @@protoc_insertion_point(field_set_allocated:RatkiniaProtocol.LoginRequest.id)
 }
 
-// string hashed_password = 2;
-inline void LoginRequest::clear_hashed_password() {
+// string password = 2;
+inline void LoginRequest::clear_password() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.hashed_password_.ClearToEmpty();
+  _impl_.password_.ClearToEmpty();
 }
-inline const std::string& LoginRequest::hashed_password() const
+inline const std::string& LoginRequest::password() const
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_get:RatkiniaProtocol.LoginRequest.hashed_password)
-  return _internal_hashed_password();
+  // @@protoc_insertion_point(field_get:RatkiniaProtocol.LoginRequest.password)
+  return _internal_password();
 }
 template <typename Arg_, typename... Args_>
-inline PROTOBUF_ALWAYS_INLINE void LoginRequest::set_hashed_password(Arg_&& arg,
+inline PROTOBUF_ALWAYS_INLINE void LoginRequest::set_password(Arg_&& arg,
                                                      Args_... args) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.hashed_password_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
-  // @@protoc_insertion_point(field_set:RatkiniaProtocol.LoginRequest.hashed_password)
+  _impl_.password_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:RatkiniaProtocol.LoginRequest.password)
 }
-inline std::string* LoginRequest::mutable_hashed_password() ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  std::string* _s = _internal_mutable_hashed_password();
-  // @@protoc_insertion_point(field_mutable:RatkiniaProtocol.LoginRequest.hashed_password)
+inline std::string* LoginRequest::mutable_password() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  std::string* _s = _internal_mutable_password();
+  // @@protoc_insertion_point(field_mutable:RatkiniaProtocol.LoginRequest.password)
   return _s;
 }
-inline const std::string& LoginRequest::_internal_hashed_password() const {
+inline const std::string& LoginRequest::_internal_password() const {
   ::google::protobuf::internal::TSanRead(&_impl_);
-  return _impl_.hashed_password_.Get();
+  return _impl_.password_.Get();
 }
-inline void LoginRequest::_internal_set_hashed_password(const std::string& value) {
+inline void LoginRequest::_internal_set_password(const std::string& value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.hashed_password_.Set(value, GetArena());
+  _impl_.password_.Set(value, GetArena());
 }
-inline std::string* LoginRequest::_internal_mutable_hashed_password() {
+inline std::string* LoginRequest::_internal_mutable_password() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  return _impl_.hashed_password_.Mutable( GetArena());
+  return _impl_.password_.Mutable( GetArena());
 }
-inline std::string* LoginRequest::release_hashed_password() {
+inline std::string* LoginRequest::release_password() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  // @@protoc_insertion_point(field_release:RatkiniaProtocol.LoginRequest.hashed_password)
-  return _impl_.hashed_password_.Release();
+  // @@protoc_insertion_point(field_release:RatkiniaProtocol.LoginRequest.password)
+  return _impl_.password_.Release();
 }
-inline void LoginRequest::set_allocated_hashed_password(std::string* value) {
+inline void LoginRequest::set_allocated_password(std::string* value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.hashed_password_.SetAllocated(value, GetArena());
+  _impl_.password_.SetAllocated(value, GetArena());
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-        if (_impl_.hashed_password_.IsDefault()) {
-          _impl_.hashed_password_.Set("", GetArena());
+        if (_impl_.password_.IsDefault()) {
+          _impl_.password_.Set("", GetArena());
         }
   #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  // @@protoc_insertion_point(field_set_allocated:RatkiniaProtocol.LoginRequest.hashed_password)
+  // @@protoc_insertion_point(field_set_allocated:RatkiniaProtocol.LoginRequest.password)
 }
 
 // -------------------------------------------------------------------
@@ -590,54 +590,54 @@ inline void RegisterRequest::set_allocated_id(std::string* value) {
   // @@protoc_insertion_point(field_set_allocated:RatkiniaProtocol.RegisterRequest.id)
 }
 
-// string hashed_password = 2;
-inline void RegisterRequest::clear_hashed_password() {
+// string password = 2;
+inline void RegisterRequest::clear_password() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.hashed_password_.ClearToEmpty();
+  _impl_.password_.ClearToEmpty();
 }
-inline const std::string& RegisterRequest::hashed_password() const
+inline const std::string& RegisterRequest::password() const
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_get:RatkiniaProtocol.RegisterRequest.hashed_password)
-  return _internal_hashed_password();
+  // @@protoc_insertion_point(field_get:RatkiniaProtocol.RegisterRequest.password)
+  return _internal_password();
 }
 template <typename Arg_, typename... Args_>
-inline PROTOBUF_ALWAYS_INLINE void RegisterRequest::set_hashed_password(Arg_&& arg,
+inline PROTOBUF_ALWAYS_INLINE void RegisterRequest::set_password(Arg_&& arg,
                                                      Args_... args) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.hashed_password_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
-  // @@protoc_insertion_point(field_set:RatkiniaProtocol.RegisterRequest.hashed_password)
+  _impl_.password_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:RatkiniaProtocol.RegisterRequest.password)
 }
-inline std::string* RegisterRequest::mutable_hashed_password() ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  std::string* _s = _internal_mutable_hashed_password();
-  // @@protoc_insertion_point(field_mutable:RatkiniaProtocol.RegisterRequest.hashed_password)
+inline std::string* RegisterRequest::mutable_password() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  std::string* _s = _internal_mutable_password();
+  // @@protoc_insertion_point(field_mutable:RatkiniaProtocol.RegisterRequest.password)
   return _s;
 }
-inline const std::string& RegisterRequest::_internal_hashed_password() const {
+inline const std::string& RegisterRequest::_internal_password() const {
   ::google::protobuf::internal::TSanRead(&_impl_);
-  return _impl_.hashed_password_.Get();
+  return _impl_.password_.Get();
 }
-inline void RegisterRequest::_internal_set_hashed_password(const std::string& value) {
+inline void RegisterRequest::_internal_set_password(const std::string& value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.hashed_password_.Set(value, GetArena());
+  _impl_.password_.Set(value, GetArena());
 }
-inline std::string* RegisterRequest::_internal_mutable_hashed_password() {
+inline std::string* RegisterRequest::_internal_mutable_password() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  return _impl_.hashed_password_.Mutable( GetArena());
+  return _impl_.password_.Mutable( GetArena());
 }
-inline std::string* RegisterRequest::release_hashed_password() {
+inline std::string* RegisterRequest::release_password() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  // @@protoc_insertion_point(field_release:RatkiniaProtocol.RegisterRequest.hashed_password)
-  return _impl_.hashed_password_.Release();
+  // @@protoc_insertion_point(field_release:RatkiniaProtocol.RegisterRequest.password)
+  return _impl_.password_.Release();
 }
-inline void RegisterRequest::set_allocated_hashed_password(std::string* value) {
+inline void RegisterRequest::set_allocated_password(std::string* value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.hashed_password_.SetAllocated(value, GetArena());
+  _impl_.password_.SetAllocated(value, GetArena());
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-        if (_impl_.hashed_password_.IsDefault()) {
-          _impl_.hashed_password_.Set("", GetArena());
+        if (_impl_.password_.IsDefault()) {
+          _impl_.password_.Set("", GetArena());
         }
   #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  // @@protoc_insertion_point(field_set_allocated:RatkiniaProtocol.RegisterRequest.hashed_password)
+  // @@protoc_insertion_point(field_set_allocated:RatkiniaProtocol.RegisterRequest.password)
 }
 
 #ifdef __GNUC__

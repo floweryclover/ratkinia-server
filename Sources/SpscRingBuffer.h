@@ -45,7 +45,7 @@ public:
     SpscRingBuffer& operator=(SpscRingBuffer&&) = delete;
 
     template<typename T>
-    __forceinline bool TryEnqueue(const T& data, const size_t size)
+    bool TryEnqueue(const T& data, const size_t size)
     {
         const auto bufferStatus = GetBufferStatus();
         if (bufferStatus.AvailableSize < size) [[unlikely]]
@@ -85,7 +85,7 @@ public:
         head_.store((head_.load(std::memory_order_acquire) + size) % Capacity, std::memory_order_release);
     }
 
-    __forceinline std::optional<const char*> TryPeek(const size_t size)
+    std::optional<const char*> TryPeek(const size_t size)
     {
         const auto bufferStatus = GetBufferStatus();
         if (bufferStatus.Size < size)
@@ -107,13 +107,13 @@ public:
         return tempDequeueBuffer_.get();
     }
 
-    __forceinline size_t GetAvailableSize() const
+    size_t GetAvailableSize() const
     {
         return GetBufferStatus().AvailableSize;
     }
 
 
-    __forceinline size_t GetSize() const
+    size_t GetSize() const
     {
         return GetBufferStatus().Size;
     }
@@ -126,7 +126,7 @@ private:
     alignas(64) std::atomic<size_t> head_{}; // inclusive
     alignas(64) std::atomic<size_t> tail_{}; // exclusive, head_와 동일하면 empty.
 
-    __forceinline BufferStatus GetBufferStatus() const
+    BufferStatus GetBufferStatus() const
     {
         const auto loadedHead{ head_.load(std::memory_order_acquire) };
         const auto loadedTail{ tail_.load(std::memory_order_acquire) };

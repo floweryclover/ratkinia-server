@@ -14,16 +14,16 @@ namespace RatkiniaProtocol
     public:
         virtual ~StcStub() = default;
 
-        virtual void OnUnknownMessageType(uint64_t context, StcMessageType messageType) = 0;
+        virtual void OnUnknownMessageType(uint32_t context, StcMessageType messageType) = 0;
 
-        virtual void OnParseMessageFailed(uint64_t context, StcMessageType messageType) = 0;
+        virtual void OnParseMessageFailed(uint32_t context, StcMessageType messageType) = 0;
 
-        virtual void OnLoginResponse(uint64_t context, const bool successful, const std::string& failure_reason) = 0;
+        virtual void OnLoginResponse(uint32_t context, const bool successful) = 0;
 
-        virtual void OnRegisterResponse(uint64_t context, const RegisterResponse_FailedReason failed_reason) = 0;
+        virtual void OnRegisterResponse(uint32_t context, const bool successful, const std::string& failed_reason) = 0;
 
         void HandleStc(
-            const uint64_t context,
+            const uint32_t context,
             const uint16_t messageType,
             const uint16_t bodySize,
             const char* const body)
@@ -38,7 +38,7 @@ namespace RatkiniaProtocol
                         static_cast<TDerivedStub*>(this)->OnParseMessageFailed(context, static_cast<StcMessageType>(messageType));
                         return;
                     }
-                    static_cast<TDerivedStub*>(this)->OnLoginResponse(context, LoginResponseMessage.successful(), LoginResponseMessage.failure_reason());
+                    static_cast<TDerivedStub*>(this)->OnLoginResponse(context, LoginResponseMessage.successful());
                     return;
                 }
                 case static_cast<int32_t>(StcMessageType::RegisterResponse):
@@ -49,7 +49,7 @@ namespace RatkiniaProtocol
                         static_cast<TDerivedStub*>(this)->OnParseMessageFailed(context, static_cast<StcMessageType>(messageType));
                         return;
                     }
-                    static_cast<TDerivedStub*>(this)->OnRegisterResponse(context, RegisterResponseMessage.failed_reason());
+                    static_cast<TDerivedStub*>(this)->OnRegisterResponse(context, RegisterResponseMessage.successful(), RegisterResponseMessage.failed_reason());
                     return;
                 }
                 default:

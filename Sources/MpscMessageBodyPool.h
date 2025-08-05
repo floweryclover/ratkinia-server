@@ -30,7 +30,7 @@ public:
 
     MpscMessageBodyPool& operator=(MpscMessageBodyPool&&) = delete;
 
-    __forceinline char* Acquire(const size_t size)
+    char* Acquire(const size_t size)
     {
         const auto [head, blockSize]{ GetMemoryBlockListHeadFor(size) };
         if (!head)
@@ -51,7 +51,7 @@ public:
         return newBlock->Body;
     }
 
-    __forceinline void Release(const size_t size, const char* const body)
+    void Release(const size_t size, const char* const body)
     {
         const auto [head, blockSize]{ GetMemoryBlockListHeadFor(size) };
         if (!head)
@@ -95,7 +95,7 @@ private:
 
     std::array<AlignedAtomicMemoryBlockListHead, 8> memoryBlockListHeads_;
 
-    __forceinline std::pair<std::atomic<MemoryBlock*>*, size_t> GetMemoryBlockListHeadFor(const size_t size)
+    std::pair<std::atomic<MemoryBlock*>*, size_t> GetMemoryBlockListHeadFor(const size_t size)
     {
         if (size > RatkiniaProtocol::MessageMaxSize - RatkiniaProtocol::MessageHeaderSize)
         {

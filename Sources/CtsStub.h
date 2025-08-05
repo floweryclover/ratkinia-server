@@ -14,19 +14,19 @@ class CtsStub final : public RatkiniaProtocol::CtsStub<CtsStub>
 public:
     explicit CtsStub(GameServer& gameServer);
 
-    void OnParseMessageFailed(uint64_t context,
+    void OnParseMessageFailed(uint32_t context,
                               RatkiniaProtocol::CtsMessageType messageType) override;
 
-    void OnUnknownMessageType(uint64_t context,
+    void OnUnknownMessageType(uint32_t context,
                               RatkiniaProtocol::CtsMessageType messageType) override;
 
-    void OnLoginRequest(uint64_t context,
+    void OnLoginRequest(uint32_t context,
                         const std::string& id,
-                        const std::string& hashed_password) override;
+                        const std::string& password) override;
 
-    void OnRegisterRequest(uint64_t context,
+    void OnRegisterRequest(uint32_t context,
                            const std::string& id,
-                           const std::string& hashed_password) override;
+                           const std::string& password) override;
 
 private:
     GameServer& gameServer_;

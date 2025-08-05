@@ -3,15 +3,12 @@
 //
 
 #include "CtsStub.h"
+#include "Database.h"
 #include "GameServer.h"
-#include "Errors.h"
-#include <openssl/sha.h>
-#include <openssl/evp.h>
-#include <iostream>
+#include <regex>
 
 using namespace pqxx;
-
-void Sha512(const char* inText, char* outHashed129);
+using namespace Database;
 
 CtsStub::CtsStub(GameServer& gameServer)
     : gameServer_{ gameServer }
@@ -19,71 +16,62 @@ CtsStub::CtsStub(GameServer& gameServer)
 
 }
 
-void CtsStub::OnParseMessageFailed(uint64_t context,
+void CtsStub::OnParseMessageFailed(const uint32_t context,
                                       RatkiniaProtocol::CtsMessageType messageType)
 {
 
 }
 
-void CtsStub::OnUnknownMessageType(uint64_t context,
+void CtsStub::OnUnknownMessageType(const uint32_t context,
                                       RatkiniaProtocol::CtsMessageType messageType)
 {
 
 }
 
-void CtsStub::OnLoginRequest(uint64_t context,
+void CtsStub::OnLoginRequest(const uint32_t context,
                                 const std::string& id,
-                                const std::string& hashed_password)
+                                const std::string& password)
 {
-    char doubleHashedPassword[129];
-    Sha512(hashed_password.c_str(), doubleHashedPassword);
+    auto& connection = gameServer_.GetDbConnection();
 
-    auto query = transaction{ gameServer_.GetDbConnection() };
-    const auto result = query.exec("SELECT * FROM auth.accounts WHERE user_id=$1;", params{ id });
+    nontransaction work{connection};
+    const auto res = work.exec(Prepped_FindUserId, id);
 
-    gameServer_.GetStcProxy().LoginResponse(context, false, "하하하하");
-}
-
-void CtsStub::OnRegisterRequest(uint64_t context,
-                                   const std::string& id,
-                                   const std::string& hashed_password)
-{
-    char doubleHashedPassword[129];
-    Sha512(hashed_password.c_str(), doubleHashedPassword);
-
-    auto query = transaction{ gameServer_.GetDbConnection() };
-    const auto result = query.exec("INSERT INTO auth.accounts(user_id, double_hashed_password) VALUES($1, $2) ON CONFLICT (user_id) DO NOTHING;", params{ id, doubleHashedPassword });
-    query.commit();
-
-    if (result.affected_rows() > 0)
+    std::array<char, 64> savedPassword{};
+    uint32_t pkeyId = 0;
+    if (!res.empty())
     {
-        gameServer_.GetStcProxy().RegisterResponse(context, RatkiniaProtocol::RegisterResponse_FailedReason_Success);
+        pkeyId = res[0][0].as<uint32_t>();
+        const auto savedPasswordString = res[0][2].as<std::string>();
+        const size_t copySize = savedPasswordString.size() + 1;
+        memcpy(savedPassword.data(), savedPasswordString.c_str(), copySize);
     }
     else
     {
-        gameServer_.GetStcProxy().RegisterResponse(context, RatkiniaProtocol::RegisterResponse_FailedReason::RegisterResponse_FailedReason_ExistingUserId);
+        memcpy(savedPassword.data(), EmptyHashedPassword.c_str(), EmptyHashedPassword.size() + 1);
     }
+
+    auto loginJob = std::make_unique<LoginJob<GameServer>>(context, pkeyId, password, savedPassword);
+    gameServer_.EnqueueAuthJob(std::move(loginJob));
 }
 
-void Sha512(const char* const inText, char* const outHashed129)
+void CtsStub::OnRegisterRequest(const uint32_t context,
+                                   const std::string& id,
+                                   const std::string& password)
 {
-    static const char* hexChars = "0123456789abcdef";
-
-    unsigned char hash[64 + 1];
-
-    EVP_MD_CTX* Ctx = EVP_MD_CTX_new();
-
-    ERR_FAIL_COND(0 == EVP_DigestInit_ex(Ctx, EVP_sha512(), nullptr));
-    ERR_FAIL_COND(0 == EVP_DigestUpdate(Ctx, inText, 64));
-    ERR_FAIL_COND(0 == EVP_DigestFinal_ex(Ctx, hash, nullptr));
-    hash[64] = '\0';
-
-    EVP_MD_CTX_free(Ctx);
-
-    for (size_t i = 0; i < 64; ++i)
+    if (password.length() < 8 || password.length() > 32)
     {
-        outHashed129[i * 2] = hexChars[(hash[i] >> 4) & 0x0F];
-        outHashed129[i * 2 + 1] = hexChars[hash[i] & 0x0F];
+        gameServer_.GetStcProxy().RegisterResponse(context, false, "비밀번호는 8자 이상 32자 이하여야 합니다.");
+        return;
     }
-    outHashed129[128] = '\0';
+
+    const std::regex invalidCharactersRegex{R"([^a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])"};
+    if (std::regex_search(password, invalidCharactersRegex))
+    {
+        gameServer_.GetStcProxy().RegisterResponse(context, false, "비밀번호에 허용되지 않는 문자가 존재합니다.");
+        return;
+    }
+
+    auto registerJob = std::make_unique<RegisterJob<GameServer>>(context, id, password);
+    gameServer_.EnqueueAuthJob(std::move(registerJob));
 }

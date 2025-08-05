@@ -365,7 +365,7 @@ void NetworkServer::PostSend(Session& session, const size_t bytesTransferred)
     }
 }
 
-void NetworkServer::DisconnectSession(const uint64_t sessionId)
+void NetworkServer::DisconnectSession(const uint32_t sessionId)
 {
     std::lock_guard lock{ sessionsMutex_ };
 

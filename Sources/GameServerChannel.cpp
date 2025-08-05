@@ -11,7 +11,7 @@ GameServerChannel::GameServerChannel()
 
 }
 
-bool GameServerChannel::TryPush(const uint64_t context, const uint16_t messageType, const uint16_t bodySize, const char* const body)
+bool GameServerChannel::TryPush(const uint32_t context, const uint16_t messageType, const uint16_t bodySize, const char* const body)
 {
     if (bodySize > RatkiniaProtocol::MessageMaxSize - RatkiniaProtocol::MessageHeaderSize)
     {

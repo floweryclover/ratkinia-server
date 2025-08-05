@@ -24,7 +24,10 @@ namespace RatkiniaProtocol {
 
 inline constexpr RegisterResponse::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
-      : failed_reason_{static_cast< ::RatkiniaProtocol::RegisterResponse_FailedReason >(0)},
+      : failed_reason_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
+        successful_{false},
         _cached_size_{0} {}
 
 template <typename>
@@ -43,10 +46,7 @@ PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
 
 inline constexpr LoginResponse::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
-      : failure_reason_(
-            &::google::protobuf::internal::fixed_address_empty_string,
-            ::_pbi::ConstantInitialized()),
-        successful_{false},
+      : successful_{false},
         _cached_size_{0} {}
 
 template <typename>
@@ -64,68 +64,6 @@ PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 LoginResponseDefaultTypeInternal _LoginResponse_default_instance_;
 }  // namespace RatkiniaProtocol
 namespace RatkiniaProtocol {
-PROTOBUF_CONSTINIT const uint32_t RegisterResponse_FailedReason_internal_data_[] = {
-    196608u, 0u, };
-bool RegisterResponse_FailedReason_IsValid(int value) {
-  return 0 <= value && value <= 2;
-}
-static ::google::protobuf::internal::ExplicitlyConstructed<std::string>
-    RegisterResponse_FailedReason_strings[3] = {};
-
-static const char RegisterResponse_FailedReason_names[] = {
-    "ExistingUserId"
-    "Success"
-    "WrongPassword"
-};
-
-static const ::google::protobuf::internal::EnumEntry RegisterResponse_FailedReason_entries[] =
-    {
-        {{&RegisterResponse_FailedReason_names[0], 14}, 1},
-        {{&RegisterResponse_FailedReason_names[14], 7}, 0},
-        {{&RegisterResponse_FailedReason_names[21], 13}, 2},
-};
-
-static const int RegisterResponse_FailedReason_entries_by_number[] = {
-    1,  // 0 -> Success
-    0,  // 1 -> ExistingUserId
-    2,  // 2 -> WrongPassword
-};
-
-const std::string& RegisterResponse_FailedReason_Name(RegisterResponse_FailedReason value) {
-  static const bool kDummy =
-      ::google::protobuf::internal::InitializeEnumStrings(
-          RegisterResponse_FailedReason_entries, RegisterResponse_FailedReason_entries_by_number,
-          3, RegisterResponse_FailedReason_strings);
-  (void)kDummy;
-
-  int idx = ::google::protobuf::internal::LookUpEnumName(
-      RegisterResponse_FailedReason_entries, RegisterResponse_FailedReason_entries_by_number, 3,
-      value);
-  return idx == -1 ? ::google::protobuf::internal::GetEmptyString()
-                   : RegisterResponse_FailedReason_strings[idx].get();
-}
-
-bool RegisterResponse_FailedReason_Parse(absl::string_view name, RegisterResponse_FailedReason* value) {
-  int int_value;
-  bool success = ::google::protobuf::internal::LookUpEnumValue(
-      RegisterResponse_FailedReason_entries, 3, name, &int_value);
-  if (success) {
-    *value = static_cast<RegisterResponse_FailedReason>(int_value);
-  }
-  return success;
-}
-#if (__cplusplus < 201703) && \
-  (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
-
-constexpr RegisterResponse_FailedReason RegisterResponse::Success;
-constexpr RegisterResponse_FailedReason RegisterResponse::ExistingUserId;
-constexpr RegisterResponse_FailedReason RegisterResponse::WrongPassword;
-constexpr RegisterResponse_FailedReason RegisterResponse::FailedReason_MIN;
-constexpr RegisterResponse_FailedReason RegisterResponse::FailedReason_MAX;
-constexpr int RegisterResponse::FailedReason_ARRAYSIZE;
-
-#endif  // (__cplusplus < 201703) &&
-        // (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
 // ===================================================================
 
 class LoginResponse::_Internal {
@@ -137,30 +75,15 @@ LoginResponse::LoginResponse(::google::protobuf::Arena* arena)
   SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:RatkiniaProtocol.LoginResponse)
 }
-inline PROTOBUF_NDEBUG_INLINE LoginResponse::Impl_::Impl_(
-    ::google::protobuf::internal::InternalVisibility visibility, ::google::protobuf::Arena* arena,
-    const Impl_& from, const ::RatkiniaProtocol::LoginResponse& from_msg)
-      : failure_reason_(arena, from.failure_reason_),
-        _cached_size_{0} {}
-
 LoginResponse::LoginResponse(
-    ::google::protobuf::Arena* arena,
-    const LoginResponse& from)
-    : ::google::protobuf::MessageLite(arena) {
-  LoginResponse* const _this = this;
-  (void)_this;
-  _internal_metadata_.MergeFrom<std::string>(
-      from._internal_metadata_);
-  new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
-  _impl_.successful_ = from._impl_.successful_;
-
-  // @@protoc_insertion_point(copy_constructor:RatkiniaProtocol.LoginResponse)
+    ::google::protobuf::Arena* arena, const LoginResponse& from)
+    : LoginResponse(arena) {
+  MergeFrom(from);
 }
 inline PROTOBUF_NDEBUG_INLINE LoginResponse::Impl_::Impl_(
     ::google::protobuf::internal::InternalVisibility visibility,
     ::google::protobuf::Arena* arena)
-      : failure_reason_(arena),
-        _cached_size_{0} {}
+      : _cached_size_{0} {}
 
 inline void LoginResponse::SharedCtor(::_pb::Arena* arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
@@ -173,7 +96,6 @@ LoginResponse::~LoginResponse() {
 }
 inline void LoginResponse::SharedDtor() {
   ABSL_DCHECK(GetArena() == nullptr);
-  _impl_.failure_reason_.Destroy();
   _impl_.~Impl_();
 }
 
@@ -194,15 +116,15 @@ LoginResponse::GetClassData() const {
   return _data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<1, 2, 0, 53, 2> LoginResponse::_table_ = {
+const ::_pbi::TcParseTable<0, 1, 0, 0, 2> LoginResponse::_table_ = {
   {
     0,  // no _has_bits_
     0, // no _extensions_
-    2, 8,  // max_field_number, fast_idx_mask
+    1, 0,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967292,  // skipmap
+    4294967294,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    2,  // num_field_entries
+    1,  // num_field_entries
     0,  // num_aux_entries
     offsetof(decltype(_table_), field_names),  // no aux_entries
     &_LoginResponse_default_instance_._instance,
@@ -212,9 +134,6 @@ const ::_pbi::TcParseTable<1, 2, 0, 53, 2> LoginResponse::_table_ = {
     ::_pbi::TcParser::GetTable<::RatkiniaProtocol::LoginResponse>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    // string failure_reason = 2;
-    {::_pbi::TcParser::FastUS1,
-     {18, 63, 0, PROTOBUF_FIELD_OFFSET(LoginResponse, _impl_.failure_reason_)}},
     // bool successful = 1;
     {::_pbi::TcParser::FastV8S1,
      {8, 63, 0, PROTOBUF_FIELD_OFFSET(LoginResponse, _impl_.successful_)}},
@@ -224,15 +143,9 @@ const ::_pbi::TcParseTable<1, 2, 0, 53, 2> LoginResponse::_table_ = {
     // bool successful = 1;
     {PROTOBUF_FIELD_OFFSET(LoginResponse, _impl_.successful_), 0, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kBool)},
-    // string failure_reason = 2;
-    {PROTOBUF_FIELD_OFFSET(LoginResponse, _impl_.failure_reason_), 0, 0,
-    (0 | ::_fl::kFcSingular | ::_fl::kUtf8String | ::_fl::kRepAString)},
   }},
   // no aux_entries
   {{
-    "\36\0\16\0\0\0\0\0"
-    "RatkiniaProtocol.LoginResponse"
-    "failure_reason"
   }},
 };
 
@@ -243,7 +156,6 @@ PROTOBUF_NOINLINE void LoginResponse::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  _impl_.failure_reason_.ClearToEmpty();
   _impl_.successful_ = false;
   _internal_metadata_.Clear<std::string>();
 }
@@ -262,14 +174,6 @@ PROTOBUF_NOINLINE void LoginResponse::Clear() {
         1, this->_internal_successful(), target);
   }
 
-  // string failure_reason = 2;
-  if (!this->_internal_failure_reason().empty()) {
-    const std::string& _s = this->_internal_failure_reason();
-    ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
-        _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "RatkiniaProtocol.LoginResponse.failure_reason");
-    target = stream->WriteStringMaybeAliased(2, _s, target);
-  }
-
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(
         _internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString).data(),
@@ -286,13 +190,6 @@ PROTOBUF_NOINLINE void LoginResponse::Clear() {
   ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
-
-  ::_pbi::Prefetch5LinesFrom7Lines(reinterpret_cast<const void*>(this));
-  // string failure_reason = 2;
-  if (!this->_internal_failure_reason().empty()) {
-    total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
-                                    this->_internal_failure_reason());
-  }
 
   // bool successful = 1;
   if (this->_internal_successful() != 0) {
@@ -319,9 +216,6 @@ void LoginResponse::MergeFrom(const LoginResponse& from) {
   ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (!from._internal_failure_reason().empty()) {
-    _this->_internal_set_failure_reason(from._internal_failure_reason());
-  }
   if (from._internal_successful() != 0) {
     _this->_impl_.successful_ = from._impl_.successful_;
   }
@@ -338,10 +232,7 @@ void LoginResponse::CopyFrom(const LoginResponse& from) {
 
 void LoginResponse::InternalSwap(LoginResponse* PROTOBUF_RESTRICT other) {
   using std::swap;
-  auto* arena = GetArena();
-  ABSL_DCHECK_EQ(arena, other->GetArena());
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.failure_reason_, &other->_impl_.failure_reason_, arena);
         swap(_impl_.successful_, other->_impl_.successful_);
 }
 
@@ -356,19 +247,34 @@ RegisterResponse::RegisterResponse(::google::protobuf::Arena* arena)
   SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:RatkiniaProtocol.RegisterResponse)
 }
+inline PROTOBUF_NDEBUG_INLINE RegisterResponse::Impl_::Impl_(
+    ::google::protobuf::internal::InternalVisibility visibility, ::google::protobuf::Arena* arena,
+    const Impl_& from, const ::RatkiniaProtocol::RegisterResponse& from_msg)
+      : failed_reason_(arena, from.failed_reason_),
+        _cached_size_{0} {}
+
 RegisterResponse::RegisterResponse(
-    ::google::protobuf::Arena* arena, const RegisterResponse& from)
-    : RegisterResponse(arena) {
-  MergeFrom(from);
+    ::google::protobuf::Arena* arena,
+    const RegisterResponse& from)
+    : ::google::protobuf::MessageLite(arena) {
+  RegisterResponse* const _this = this;
+  (void)_this;
+  _internal_metadata_.MergeFrom<std::string>(
+      from._internal_metadata_);
+  new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
+  _impl_.successful_ = from._impl_.successful_;
+
+  // @@protoc_insertion_point(copy_constructor:RatkiniaProtocol.RegisterResponse)
 }
 inline PROTOBUF_NDEBUG_INLINE RegisterResponse::Impl_::Impl_(
     ::google::protobuf::internal::InternalVisibility visibility,
     ::google::protobuf::Arena* arena)
-      : _cached_size_{0} {}
+      : failed_reason_(arena),
+        _cached_size_{0} {}
 
 inline void RegisterResponse::SharedCtor(::_pb::Arena* arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
-  _impl_.failed_reason_ = {};
+  _impl_.successful_ = {};
 }
 RegisterResponse::~RegisterResponse() {
   // @@protoc_insertion_point(destructor:RatkiniaProtocol.RegisterResponse)
@@ -377,6 +283,7 @@ RegisterResponse::~RegisterResponse() {
 }
 inline void RegisterResponse::SharedDtor() {
   ABSL_DCHECK(GetArena() == nullptr);
+  _impl_.failed_reason_.Destroy();
   _impl_.~Impl_();
 }
 
@@ -397,15 +304,15 @@ RegisterResponse::GetClassData() const {
   return _data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<0, 1, 0, 0, 2> RegisterResponse::_table_ = {
+const ::_pbi::TcParseTable<1, 2, 0, 55, 2> RegisterResponse::_table_ = {
   {
     0,  // no _has_bits_
     0, // no _extensions_
-    1, 0,  // max_field_number, fast_idx_mask
+    2, 8,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967294,  // skipmap
+    4294967292,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    1,  // num_field_entries
+    2,  // num_field_entries
     0,  // num_aux_entries
     offsetof(decltype(_table_), field_names),  // no aux_entries
     &_RegisterResponse_default_instance_._instance,
@@ -415,18 +322,27 @@ const ::_pbi::TcParseTable<0, 1, 0, 0, 2> RegisterResponse::_table_ = {
     ::_pbi::TcParser::GetTable<::RatkiniaProtocol::RegisterResponse>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    // .RatkiniaProtocol.RegisterResponse.FailedReason failed_reason = 1;
-    {::_pbi::TcParser::FastV32S1,
-     {8, 63, 0, PROTOBUF_FIELD_OFFSET(RegisterResponse, _impl_.failed_reason_)}},
+    // string failed_reason = 2;
+    {::_pbi::TcParser::FastUS1,
+     {18, 63, 0, PROTOBUF_FIELD_OFFSET(RegisterResponse, _impl_.failed_reason_)}},
+    // bool successful = 1;
+    {::_pbi::TcParser::FastV8S1,
+     {8, 63, 0, PROTOBUF_FIELD_OFFSET(RegisterResponse, _impl_.successful_)}},
   }}, {{
     65535, 65535
   }}, {{
-    // .RatkiniaProtocol.RegisterResponse.FailedReason failed_reason = 1;
+    // bool successful = 1;
+    {PROTOBUF_FIELD_OFFSET(RegisterResponse, _impl_.successful_), 0, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kBool)},
+    // string failed_reason = 2;
     {PROTOBUF_FIELD_OFFSET(RegisterResponse, _impl_.failed_reason_), 0, 0,
-    (0 | ::_fl::kFcSingular | ::_fl::kOpenEnum)},
+    (0 | ::_fl::kFcSingular | ::_fl::kUtf8String | ::_fl::kRepAString)},
   }},
   // no aux_entries
   {{
+    "\41\0\15\0\0\0\0\0"
+    "RatkiniaProtocol.RegisterResponse"
+    "failed_reason"
   }},
 };
 
@@ -437,7 +353,8 @@ PROTOBUF_NOINLINE void RegisterResponse::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  _impl_.failed_reason_ = 0;
+  _impl_.failed_reason_.ClearToEmpty();
+  _impl_.successful_ = false;
   _internal_metadata_.Clear<std::string>();
 }
 
@@ -448,11 +365,19 @@ PROTOBUF_NOINLINE void RegisterResponse::Clear() {
   ::uint32_t cached_has_bits = 0;
   (void)cached_has_bits;
 
-  // .RatkiniaProtocol.RegisterResponse.FailedReason failed_reason = 1;
-  if (this->_internal_failed_reason() != 0) {
+  // bool successful = 1;
+  if (this->_internal_successful() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteEnumToArray(
-        1, this->_internal_failed_reason(), target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(
+        1, this->_internal_successful(), target);
+  }
+
+  // string failed_reason = 2;
+  if (!this->_internal_failed_reason().empty()) {
+    const std::string& _s = this->_internal_failed_reason();
+    ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+        _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "RatkiniaProtocol.RegisterResponse.failed_reason");
+    target = stream->WriteStringMaybeAliased(2, _s, target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -472,10 +397,16 @@ PROTOBUF_NOINLINE void RegisterResponse::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // .RatkiniaProtocol.RegisterResponse.FailedReason failed_reason = 1;
-  if (this->_internal_failed_reason() != 0) {
-    total_size += 1 +
-                  ::_pbi::WireFormatLite::EnumSize(this->_internal_failed_reason());
+  ::_pbi::Prefetch5LinesFrom7Lines(reinterpret_cast<const void*>(this));
+  // string failed_reason = 2;
+  if (!this->_internal_failed_reason().empty()) {
+    total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
+                                    this->_internal_failed_reason());
+  }
+
+  // bool successful = 1;
+  if (this->_internal_successful() != 0) {
+    total_size += 2;
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -498,8 +429,11 @@ void RegisterResponse::MergeFrom(const RegisterResponse& from) {
   ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (from._internal_failed_reason() != 0) {
-    _this->_impl_.failed_reason_ = from._impl_.failed_reason_;
+  if (!from._internal_failed_reason().empty()) {
+    _this->_internal_set_failed_reason(from._internal_failed_reason());
+  }
+  if (from._internal_successful() != 0) {
+    _this->_impl_.successful_ = from._impl_.successful_;
   }
   _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
 }
@@ -514,8 +448,11 @@ void RegisterResponse::CopyFrom(const RegisterResponse& from) {
 
 void RegisterResponse::InternalSwap(RegisterResponse* PROTOBUF_RESTRICT other) {
   using std::swap;
+  auto* arena = GetArena();
+  ABSL_DCHECK_EQ(arena, other->GetArena());
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  swap(_impl_.failed_reason_, other->_impl_.failed_reason_);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.failed_reason_, &other->_impl_.failed_reason_, arena);
+        swap(_impl_.successful_, other->_impl_.successful_);
 }
 
 // @@protoc_insertion_point(namespace_scope)

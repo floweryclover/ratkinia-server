@@ -7,30 +7,34 @@
 
 #include "MessagePrinter.h"
 
+#define _STR(x) #x
+
+#define _MKSTR(x) _STR(x)
+
 #define ERR_PRINT(msg) \
-    MessagePrinter::WriteErrorLine(__FUNCTION__, __FILE__, __LINE__, msg)
+    MessagePrinter::WriteErrorLine("Function: ", __FUNCTION__, " at ", __FILE__, " line: ", __LINE__, ", Message: ", msg)
 
 #define ERR_PRINT_VARARGS(...)                                                                  \
-    MessagePrinter::WriteErrorLine(__FUNCTION__, __FILE__, __LINE__, __VA_ARGS__)               \
+    MessagePrinter::WriteErrorLine("Function: ", __FUNCTION__, " at ", __FILE__, " line: ", __LINE__, " ", __VA_ARGS__)               \
 
 #define ERR_FAIL_COND(cond)                                                                                                    \
     if (!!(cond))                                                                                                         \
     {                                                                                                                           \
-        ERR_PRINT_VARARGS(__FUNCTION__, " ", __FILE__, " ", __LINE__, " Condition \"" , #cond, "\" is true.");                        \
+        ERR_PRINT_VARARGS("Condition \"" , _MKSTR(cond), "\" is true.");                        \
         return;                                                                                                                 \
     } else                                                                                                                      \
         ((void)0)
 
 #define ERR_FAIL_COND_V(cond, retval)                                                                                                   \
     if (!!(cond)) {                                                                                                                \
-        ERR_PRINT_VARARGS(__FUNCTION__, " ", __FILE__, " ", __LINE__, " Condition \"", #cond, "\" is true. Returning: ", #retval);          \
+        ERR_PRINT_VARARGS("Condition \"", _MKSTR(cond), "\" is true. Returning: ", _MKSTR(retval);          \
         return retval;                                                                                                                   \
     } else                                                                                                                               \
         ((void)0)
 
 #define ERR_FAIL_NULL_V(param, retval)                                                                                                          \
     if (!!(!(param))) {                                                                                                               \
-        ERR_PRINT_VARARGS(__FUNCTION__, " ", __FILE__, " ", __LINE__, " ", " Parameter \"", #param, "\" is null. Returning: ", #retval);               \
+        ERR_PRINT_VARARGS("Parameter \"", _MKSTR(param), "\" is null. Returning: ", _MKSTR(retval));               \
         return retval;                                                                                                                  \
     } else                                                                                                                               \
         ((void)0)
@@ -38,7 +42,7 @@
 #define ERR_CONTINUE_COND(cond)                                                                                                    \
     if (!!(cond))                                                                                                         \
     {                                                                                                                           \
-        ERR_PRINT_VARARGS(__FUNCTION__, " ", __FILE__, " ", __LINE__, " ", " Condition \"", #cond, "\" is true.");                        \
+        ERR_PRINT_VARARGS("Condition \"", _MKSTR(cond), "\" is true.");                        \
         continue;                                                                                                                 \
     } else                                                                                                                      \
         ((void)0)
@@ -46,14 +50,14 @@
 #define ERR_CONTINUE_NULL(param)                                                                                                    \
     if (!!(!(param)))                                                                                                         \
     {                                                                                                                           \
-        ERR_PRINT_VARARGS(__FUNCTION__, " ", __FILE__, " ", __LINE__, " ", " Parameter \"", #param, "\"  is null. Continuing.");                        \
+        ERR_PRINT_VARARGS("Parameter \"", _MKSTR(param), "\"  is null. Continuing.");                        \
         continue;                                                                                                                 \
     } else                                                                                                                      \
         ((void)0)
 
 #define ERR_CONTINUE_MSG(cond, msg)                                                                                            \
     if (!!(cond)) {                                                                                                        \
-        ERR_PRINT_VARARGS(__FUNCTION__, " ", __FILE__, " ", __LINE__, " ", " Condition \"" #cond "\" is true. Continuing.", msg); \
+        ERR_PRINT_VARARGS("Condition \"", _MKSTR(cond), "\" is true. Continuing. Message: ", msg); \
         continue;                                                                                                                  \
     } else                                                                                                                         \
         ((void)0)
@@ -61,9 +65,18 @@
 #define ERR_FAIL_NULL(param)                                                                                                   \
     if (!!(!(param)))                                                                                             \
     {                                                                                                                           \
-        ERR_PRINT_VARARGS(__FUNCTION__, " ", __FILE__, " ", __LINE__, "Parameter \"" #param "\" is null.");                         \
+        ERR_PRINT_VARARGS("Parameter \"", _MKSTR(param), "\" is null.");                         \
         return;                                                                                                                 \
     } else                                                                                                                      \
+        ((void)0)
+
+#define CRASH_COND(cond)                                                                \
+    if (!!(cond))                                                                       \
+    {                                                                                   \
+        ERR_PRINT_VARARGS("FATAL: Condition \"", _MKSTR(cond), "\" is true.");          \
+        std::abort();                                                                   \
+    }                                                                                   \
+    else                                                                                \
         ((void)0)
 
 #endif //RATKINIASERVER_ERRORS_H

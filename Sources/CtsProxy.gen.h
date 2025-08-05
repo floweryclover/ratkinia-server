@@ -12,19 +12,19 @@ namespace RatkiniaProtocol
     class CtsProxy
     {
     public:
-        void LoginRequest(const uint64_t context, const std::string& id, const std::string& hashed_password)
+        void LoginRequest(const uint32_t context, const std::string& id, const std::string& password)
         {
             class LoginRequest LoginRequestMessage;
             LoginRequestMessage.set_id(id);
-            LoginRequestMessage.set_hashed_password(hashed_password);
+            LoginRequestMessage.set_password(password);
             static_cast<TDerivedProxy*>(this)->WriteMessage(context, CtsMessageType::LoginRequest, LoginRequestMessage);
         }
 
-        void RegisterRequest(const uint64_t context, const std::string& id, const std::string& hashed_password)
+        void RegisterRequest(const uint32_t context, const std::string& id, const std::string& password)
         {
             class RegisterRequest RegisterRequestMessage;
             RegisterRequestMessage.set_id(id);
-            RegisterRequestMessage.set_hashed_password(hashed_password);
+            RegisterRequestMessage.set_password(password);
             static_cast<TDerivedProxy*>(this)->WriteMessage(context, CtsMessageType::RegisterRequest, RegisterRequestMessage);
         }
     };

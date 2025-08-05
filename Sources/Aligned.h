@@ -12,12 +12,12 @@ struct alignas(64) AlignedAtomic final
 {
     std::atomic<T> Value;
 
-    __forceinline std::atomic<T>* operator->()
+    std::atomic<T>* operator->()
     {
         return &Value;
     }
 
-    __forceinline const std::atomic<T>* operator->() const
+    const std::atomic<T>* operator->() const
     {
         return &Value;
     }

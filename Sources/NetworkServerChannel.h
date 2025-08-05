@@ -15,7 +15,7 @@ class NetworkServerChannel final : public CreateSpscChannelFromThis<NetworkServe
 public:
     struct PeekOutput final
     {
-        uint64_t Context{};
+        uint32_t Context{};
         uint16_t MessageType{};
         uint16_t BodySize{};
         const char* Body;
@@ -29,7 +29,7 @@ public:
     explicit NetworkServerChannel();
 
     template<typename TMessage>
-    __forceinline bool TryPush(const uint64_t context,
+    bool TryPush(const uint32_t context,
                                const uint16_t messageType,
                                const TMessage& message)
     {
@@ -40,47 +40,47 @@ public:
             return false;
         }
 
-        char header[8 + 2 + 2];
-        memcpy(header, &context, 8);
-        memcpy(header + 8, &messageType, 2);
-        memcpy(header + 8 + 2, &messageSize, 2);
-        ringBuffer_.TryEnqueue(header, 12);
+        char header[4 + 2 + 2];
+        memcpy(header, &context, 4);
+        memcpy(header + 4, &messageType, 2);
+        memcpy(header + 4 + 2, &messageSize, 2);
+        ringBuffer_.TryEnqueue(header, 8);
         ringBuffer_.TryEnqueue(message, messageSize);
 
         return true;
     }
 
-    __forceinline ChannelPeekOutputType TryPeek()
+    ChannelPeekOutputType TryPeek()
     {
-        const auto contextHeader{ ringBuffer_.TryPeek(8 + 2 + 2) };
+        const auto contextHeader{ ringBuffer_.TryPeek(4 + 2 + 2) };
         if (!contextHeader) [[unlikely]]
         {
             return std::nullopt;
         }
 
-        uint64_t context;
+        uint32_t context;
         uint16_t messageType;
         uint16_t bodySize;
-        memcpy(&context, *contextHeader, 8);
-        memcpy(&messageType, *contextHeader + 8, 2);
-        memcpy(&bodySize, *contextHeader + 8 + 2, 2);
-        const auto fullBuffer{ ringBuffer_.TryPeek(8 + 2 + 2 + bodySize) };
+        memcpy(&context, *contextHeader, 4);
+        memcpy(&messageType, *contextHeader + 4, 2);
+        memcpy(&bodySize, *contextHeader + 4 + 2, 2);
+        const auto fullBuffer{ ringBuffer_.TryPeek(4 + 2 + 2 + bodySize) };
         if (!fullBuffer) [[unlikely]]
         {
             return std::nullopt;
         }
 
-        return std::make_optional<PeekOutput>(context, messageType, bodySize, *fullBuffer + 8 + 2 + 2);
+        return std::make_optional<PeekOutput>(context, messageType, bodySize, *fullBuffer + 4 + 2 + 2);
     }
 
-    __forceinline bool Empty()
+    bool Empty()
     {
         return ringBuffer_.GetSize() == 0;
     }
 
-    __forceinline void Pop(ChannelPopInputType popInput)
+    void Pop(ChannelPopInputType popInput)
     {
-        ringBuffer_.Dequeue(8 + 2 + 2 + popInput.BodySize);
+        ringBuffer_.Dequeue(4 + 2 + 2 + popInput.BodySize);
     }
 
 private:
