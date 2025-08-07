@@ -5,7 +5,8 @@
 #include "NetworkServer.h"
 #include "MainServer.h"
 #include "MessagePrinter.h"
-#include "Errors.h"
+#include "ErrorMacros.h"
+#include <WS2tcpip.h>
 
 NetworkServer::NetworkServer(NetworkServerChannel::SpscReceiver networkServerReceiver,
                              MainServerChannel::MpscSender mainServerSender,
@@ -18,7 +19,12 @@ NetworkServer::NetworkServer(NetworkServerChannel::SpscReceiver networkServerRec
       newSessionId_{ 0 },
       acceptContexts_{ std::make_unique<AcceptContext[]>(AcceptPoolSize) }
 {
+    sslCtx_ = SSL_CTX_new(TLS_server_method());
+    CRASH_COND(sslCtx_ == nullptr);
 
+    CRASH_COND(1 != SSL_CTX_use_certificate_file(sslCtx_, "ratkinia.crt", SSL_FILETYPE_PEM));
+    CRASH_COND(1 != SSL_CTX_use_PrivateKey_file(sslCtx_, "ratkinia.key", SSL_FILETYPE_PEM));
+    CRASH_COND(1 != SSL_CTX_check_private_key(sslCtx_));
 }
 
 NetworkServer::~NetworkServer()
@@ -40,6 +46,8 @@ NetworkServer::~NetworkServer()
     {
         CloseHandle(iocpHandle_);
     }
+
+    SSL_CTX_free(sslCtx_);
 }
 
 void NetworkServer::Start(const std::string& listenAddress, unsigned short listenPort)
@@ -301,10 +309,14 @@ void NetworkServer::AcceptAsync()
         return;
     }
 
+    const auto ssl = SSL_new(sslCtx_);
+    CRASH_COND(ssl == nullptr);
+    CRASH_COND(1 != SSL_set_fd(ssl, clientSocket));
+
     std::lock_guard lock{ sessionsMutex_ };
     auto [iter, result] = sessions_.emplace(std::piecewise_construct,
                                             std::forward_as_tuple(newSessionId_),
-                                            std::forward_as_tuple(clientSocket, newSessionId_));
+                                            std::forward_as_tuple(iocpHandle_, clientSocket, ssl, newSessionId_));
     auto& session = iter->second;
 
     if (!session.TryAcceptAsync(listenSocket_, reinterpret_cast<LPOVERLAPPED>(acceptContext)))
@@ -312,13 +324,12 @@ void NetworkServer::AcceptAsync()
         acceptContext->SessionId = NullSessionId;
         DisconnectSession(sessionId);
         mainServerSender_.TryPush(std::make_unique<ShutdownCommand>());
-        return;
     }
 }
 
 void NetworkServer::PostAccept(Session& session)
 {
-    if (!session.TryPostAccept(iocpHandle_))
+    if (!session.TryPostAccept())
     {
         DisconnectSession(session.SessionId);
         return;
@@ -331,37 +342,29 @@ void NetworkServer::PostAccept(Session& session)
 
 void NetworkServer::PostReceive(Session& session, const size_t bytesTransferred)
 {
-    session.PostReceive(bytesTransferred);
-
-    if (bytesTransferred == 0)
+    if (!session.TryPostReceive(bytesTransferred) ||
+        !session.TryReceiveAsync())
     {
         DisconnectSession(session.SessionId);
         return;
     }
 
-    while (session.TryPopMessage([&](auto sessionId, auto messageType, auto bodySize, auto body)
-                                 {
-                                     return gameServerSender_.TryPush(sessionId, messageType, bodySize, body);
-                                 },
-                                 [&](auto sessionId)
-                                 {
-                                     MessagePrinter::WriteErrorLine("NetworkServer -> GameServer 메시지 큐 Push에 실패하였습니다:", sessionId);
-                                     mainServerSender_.TryPush(std::make_unique<ShutdownCommand>());
-                                 }));
-    if (!session.TryReceiveAsync())
+    while (const auto peekResult = session.TryPeekMessage())
     {
-        DisconnectSession(session.SessionId);
+        const auto [messageType, bodySize, body] = *peekResult;
+
+        CRASH_COND(!gameServerSender_.TryPush(session.SessionId, messageType, bodySize, body));
+
+        session.Pop(RatkiniaProtocol::MessageHeaderSize + bodySize);
     }
 }
 
 void NetworkServer::PostSend(Session& session, const size_t bytesTransferred)
 {
-    session.PostSend(bytesTransferred);
-    if (bytesTransferred == 0
-        || !session.TrySendAsync())
+    if (!session.TryPostSend(bytesTransferred) ||
+        session.IsSendPending() && !session.TrySendAsync())
     {
         DisconnectSession(session.SessionId);
-        return;
     }
 }
 

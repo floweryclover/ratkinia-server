@@ -32,6 +32,14 @@
     } else                                                                                                                               \
         ((void)0)
 
+#define ERR_FAIL_COND_V_MSG(cond, retval, msg)                                                                                                   \
+    if (!!(cond)) {                                                                                                                \
+        ERR_PRINT_VARARGS("Condition \"", _MKSTR(cond), "\" is true. Returning: ", _MKSTR(retval), ". Message: ", msg);          \
+        return retval;                                                                                                                   \
+    }\
+    else                                                                                                                               \
+        ((void)0)
+
 #define ERR_FAIL_NULL_V(param, retval)                                                                                                          \
     if (!!(!(param))) {                                                                                                               \
         ERR_PRINT_VARARGS("Parameter \"", _MKSTR(param), "\" is null. Returning: ", _MKSTR(retval));               \
@@ -69,6 +77,14 @@
         return;                                                                                                                 \
     } else                                                                                                                      \
         ((void)0)
+
+#define CRASH_NOW_MSG(msg) \
+    do  \
+    {   \
+        ERR_PRINT(msg); \
+        std::abort();   \
+    }   \
+    while (0)   \
 
 #define CRASH_COND(cond)                                                                \
     if (!!(cond))                                                                       \

@@ -6,7 +6,7 @@
 #define RATKINIASERVER_MESSAGEPOOL_H
 
 #include "RatkiniaProtocol.gen.h"
-#include "Errors.h"
+#include "ErrorMacros.h"
 #include <array>
 #include <vector>
 #include <memory>

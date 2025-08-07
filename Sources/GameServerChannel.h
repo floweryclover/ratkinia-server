@@ -6,7 +6,7 @@
 #define RATKINIASERVER_GAMESERVERTERMINAL_H
 
 #include "Channel.h"
-#include "Errors.h"
+#include "ErrorMacros.h"
 #include "MpscMessageBodyPool.h"
 #include "RatkiniaProtocol.gen.h"
 #include <memory>

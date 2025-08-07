@@ -1,12 +1,15 @@
 ﻿#include "NetworkServer.h"
 #include "MainServer.h"
 #include "GameServer.h"
+#include <openssl/err.h>
 #include <WinSock2.h>
 
 int main()
 {
     SetConsoleOutputCP(65001);
 
+    SSL_load_error_strings();
+    ERR_load_crypto_strings();
     WSAData wsaData{};
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
     {

@@ -5,17 +5,28 @@
 #ifndef RATKINIASERVER_SESSION_H
 #define RATKINIASERVER_SESSION_H
 
+#include "ErrorMacros.h"
+#include "NetworkServerChannel.h"
 #include "RatkiniaProtocol.gen.h"
-#include "Aligned.h"
+#include <openssl/ssl.h>
 #include <WinSock2.h>
 #include <memory>
 #include <string>
-#include <iostream>
+#include <variant>
+#include <optional>
+
+enum class SessionState : uint8_t
+{
+    PreAccept,
+    Ready,
+    Closing,
+};
+
 enum class IOType : uint8_t
 {
     Send,
     Receive,
-    Accept
+    Accept,
 };
 
 struct OverlappedEx final
@@ -24,16 +35,70 @@ struct OverlappedEx final
     IOType Type{};
 };
 
-class Session final
+inline size_t GetRingBufferSize(const size_t bufferCapacity, const size_t head, const size_t tail)
+{
+    return head <= tail ? tail - head : bufferCapacity - head + tail;
+}
+
+inline std::optional<std::pair<size_t, size_t>> GetWritableSizes(const size_t bufferCapacity, const size_t head, const size_t tail, const size_t sizeToWrite)
+{
+    const size_t ringBufferSize = GetRingBufferSize(bufferCapacity, head, tail);
+    const size_t ringBufferAvailableSize = bufferCapacity - ringBufferSize - 1;
+    if (ringBufferAvailableSize < sizeToWrite)
+    {
+        return std::nullopt;
+    }
+
+    const size_t primarySize = std::min<size_t>(sizeToWrite, bufferCapacity - tail);
+    const size_t secondarySize = sizeToWrite - primarySize;
+    return std::make_optional<std::pair<size_t, size_t>>(primarySize, secondarySize);
+}
+
+inline std::optional<std::pair<size_t, size_t>> GetReadableSizes(const size_t bufferCapacity, const size_t head, const size_t tail, const size_t sizeToRead)
+{
+    const size_t ringBufferSize = GetRingBufferSize(bufferCapacity, head, tail);
+    if (ringBufferSize < sizeToRead)
+    {
+        return std::nullopt;
+    }
+
+    const size_t primarySize = std::min<size_t>(sizeToRead, bufferCapacity - head);
+    const size_t secondarySize = sizeToRead - primarySize;
+    return std::make_optional<std::pair<size_t, size_t>>(primarySize, secondarySize);
+}
+
+class alignas(64) Session final
 {
 public:
+    enum class ReceiveBuffersProcessResult : uint8_t
+    {
+        Success,
+        WantProcessSendBuffers,
+        Failed,
+    };
+
+    enum class SendBuffersProcessResult : uint8_t
+    {
+        Success,
+        WantProcessReceiveBuffers,
+        Failed
+    };
+
+    struct MessagePeekResult final
+    {
+        uint16_t MessageType;
+        uint16_t BodySize;
+        const char* Body;
+    };
+
+    static constexpr size_t BufferCapacity = RatkiniaProtocol::MessageMaxSize * 4;
+
     const size_t SessionId;
-    const size_t BufferCapacity;
 
     OverlappedEx IOContext_Receive;
     OverlappedEx IOContext_Send;
 
-    explicit Session(SOCKET socket, size_t sessionId);
+    explicit Session(HANDLE iocp, SOCKET socket, SSL* ssl, size_t sessionId);
 
     ~Session();
 
@@ -41,7 +106,7 @@ public:
 
     bool TryAcceptAsync(SOCKET listenSocket, LPOVERLAPPED acceptOverlapped);
 
-    bool TryPostAccept(HANDLE iocpHandle);
+    bool TryPostAccept();
 
     bool TryReceiveAsync();
 
@@ -49,131 +114,138 @@ public:
 
     bool IsErasable();
 
-    bool TryEnqueueSendBuffer(const char* const data, const size_t size)
+    bool TryEnqueueSendBuffer(const char* data, size_t size);
+
+    bool TryPostReceive(size_t bytesTransferred);
+
+    bool TryPostSend(size_t bytesTransferred);
+
+    void ReleaseReceiveFlag()
     {
-        const auto loadedSendBufferHead{ sendBufferHead_->load(std::memory_order_acquire) };
-        const auto loadedSendBufferTail{ sendBufferTail_->load(std::memory_order_acquire) };
-        const auto sendBufferSize{ loadedSendBufferHead <= loadedSendBufferTail ? loadedSendBufferTail - loadedSendBufferHead : BufferCapacity - loadedSendBufferHead + loadedSendBufferTail };
-        const auto sendBufferAvailable{ BufferCapacity - sendBufferSize - 1 };
-
-        if (size > sendBufferAvailable)
-        {
-            return false;
-        }
-
-        const auto primarySize{ std::min<size_t>(size, BufferCapacity - loadedSendBufferTail) };
-        const auto secondarySize{ size - primarySize };
-        memcpy(sendBuffer_.get() + loadedSendBufferTail, data, primarySize);
-        memcpy(sendBuffer_.get(), data + primarySize, secondarySize);
-        sendBufferTail_->store((loadedSendBufferTail + size) % BufferCapacity, std::memory_order_release);
-
-        return true;
+        receiveFlag_.store(false, std::memory_order_release);
     }
 
-    void PostReceive(const size_t bytesTransferred)
+    void Pop(const size_t size)
     {
-        receiveFlag_->store(false, std::memory_order_release);
-        receiveBufferTail_->store((receiveBufferTail_->load(std::memory_order_acquire) + bytesTransferred) % BufferCapacity);
+        receiveAppBufferHead_ = (receiveAppBufferHead_ + size) % BufferCapacity;
     }
 
-    void PostSend(const size_t bytesTransferred)
+    [[nodiscard]]
+    bool IsSendPending() const
     {
-        sendFlag_->store(false, std::memory_order_release);
-        sendBufferHead_->store((sendBufferHead_->load(std::memory_order_acquire) + bytesTransferred) % BufferCapacity, std::memory_order_release);
+        return sendTlsBufferHead_.load(std::memory_order_relaxed) != sendTlsBufferTail_.load(std::memory_order_relaxed) ||
+            sendAppBufferHead_.load(std::memory_order_relaxed) != sendAppBufferTail_.load(std::memory_order_relaxed);
     }
 
-    bool TryPopMessage(auto&& push, auto&& onFailed)
+    std::optional<MessagePeekResult> TryPeekMessage()
     {
         using namespace RatkiniaProtocol;
 
-        const auto loadedReceiveBufferHead{ receiveBufferHead_->load(std::memory_order_acquire) };
-        const auto loadedReceiveBufferTail{ receiveBufferTail_->load(std::memory_order_acquire) };
-        const auto receiveBufferSize{ loadedReceiveBufferHead <= loadedReceiveBufferTail ? loadedReceiveBufferTail - loadedReceiveBufferHead : BufferCapacity
-                                                                                                                                               - loadedReceiveBufferHead
-                                                                                                                                               + loadedReceiveBufferTail };
-        if (receiveBufferSize < MessageHeaderSize)
+        const auto readableHeaderSizes = GetReadableSizes(BufferCapacity, receiveAppBufferHead_, receiveAppBufferTail_, MessageHeaderSize);
+        if (!readableHeaderSizes)
         {
-            return false;
+            return std::nullopt;
         }
+        const auto [primaryHeaderSize, secondaryHeaderSize] = *readableHeaderSizes;
 
-        const auto primaryHeaderSize = std::min<size_t>(MessageHeaderSize,
-                                                        BufferCapacity
-                                                        - loadedReceiveBufferHead);
-        const auto secondaryHeaderSize = MessageHeaderSize - primaryHeaderSize;
-
-        MessageHeader header{};
+        MessageHeader header;
         memcpy_s(&header,
                  primaryHeaderSize,
-                 receiveBuffer_.get() + loadedReceiveBufferHead,
+                 ReceiveAppBuffer.get() + receiveAppBufferHead_,
                  primaryHeaderSize);
         memcpy_s(reinterpret_cast<char*>(&header) + primaryHeaderSize,
                  secondaryHeaderSize,
-                 receiveBuffer_.get(),
+                 ReceiveAppBuffer.get(),
                  secondaryHeaderSize);
         header.MessageType = ntohs(header.MessageType);
         header.BodyLength = ntohs(header.BodyLength);
 
-        const auto messageTotalSize = MessageHeaderSize + header.BodyLength;
-        if (receiveBufferSize < messageTotalSize)
+        const auto readableBodySizes = GetReadableSizes(BufferCapacity, (receiveAppBufferHead_ + MessageHeaderSize) % BufferCapacity, receiveAppBufferTail_, header.BodyLength);
+        if (!readableBodySizes)
         {
-            return false;
+            return std::nullopt;
         }
-
-        const auto loadedReceiveBufferHeadAfterHeader = (loadedReceiveBufferHead
-                                                         + MessageHeaderSize) % BufferCapacity;
-        const auto primaryBodySize = std::min<size_t>(header.BodyLength,
-                                                      BufferCapacity
-                                                      - loadedReceiveBufferHeadAfterHeader);
-        const auto secondaryBodySize = header.BodyLength - primaryBodySize;
+        const auto [primaryBodySize, secondaryBodySize] = *readableBodySizes;
+        const size_t bodyHead = (receiveAppBufferHead_ + MessageHeaderSize) % BufferCapacity;
 
         if (primaryBodySize == header.BodyLength)
         {
-            if (!push(SessionId,
-                      header.MessageType,
-                      header.BodyLength,
-                      receiveBuffer_.get() + loadedReceiveBufferHeadAfterHeader))
-            {
-                onFailed(SessionId);
-            }
-        }
-        else
-        {
-            memcpy_s(receiveTempBuffer_.get(),
-                     primaryBodySize,
-                     receiveBuffer_.get() + loadedReceiveBufferHeadAfterHeader,
-                     primaryBodySize);
-            memcpy_s(receiveTempBuffer_.get() + primaryBodySize,
-                     secondaryBodySize,
-                     receiveBuffer_.get(),
-                     secondaryBodySize);
-            if (!push(SessionId,
-                      header.MessageType,
-                      header.BodyLength,
-                      receiveTempBuffer_.get()))
-            {
-                onFailed(SessionId);
-            }
+            return std::make_optional<MessagePeekResult>(
+                header.MessageType,
+                header.BodyLength,
+                ReceiveAppBuffer.get() + bodyHead);
         }
 
-        receiveBufferHead_->store((loadedReceiveBufferHeadAfterHeader + header.BodyLength) % BufferCapacity, std::memory_order_release);
-        return true;
+        memcpy_s(ReceiveContiguousPopBuffer.get(),
+                 primaryBodySize,
+                 ReceiveAppBuffer.get() + bodyHead,
+                 primaryBodySize);
+        memcpy_s(ReceiveContiguousPopBuffer.get() + primaryBodySize,
+                 secondaryBodySize,
+                 ReceiveAppBuffer.get(),
+                 secondaryBodySize);
+        return std::make_optional<MessagePeekResult>(
+            header.MessageType,
+            header.BodyLength,
+            ReceiveContiguousPopBuffer.get());
     }
 
 private:
-    SOCKET socket_;
+    const HANDLE Iocp;
+    const SOCKET Socket;
     SOCKADDR_IN addressRaw_;
     std::string address_;
+    std::atomic<SessionState> state_;
 
-    std::unique_ptr<char[]> receiveBuffer_;
-    std::unique_ptr<char[]> receiveTempBuffer_;
-    std::unique_ptr<char[]> sendBuffer_;
+    SSL* const Ssl;
+    BIO* const WriteBio;
+    BIO* const ReadBio;
+    std::mutex sslMutex_;
 
-    AlignedAtomic<size_t> receiveBufferHead_;
-    AlignedAtomic<size_t> receiveBufferTail_;
-    AlignedAtomic<bool> receiveFlag_;
-    AlignedAtomic<size_t> sendBufferHead_;
-    AlignedAtomic<size_t> sendBufferTail_;
-    AlignedAtomic<bool> sendFlag_;
+    const std::unique_ptr<char[]> ReceiveTlsBuffer;
+    const std::unique_ptr<char[]> ReceiveAppBuffer;
+    const std::unique_ptr<char[]> ReceiveContiguousPopBuffer;
+
+    const std::unique_ptr<char[]> SendTlsBuffer;
+    const std::unique_ptr<char[]> SendAppBuffer;
+
+    alignas(64) std::atomic<size_t> receiveTlsBufferHead_;
+    alignas(64) std::atomic<size_t> receiveTlsBufferTail_;
+    alignas(64) std::atomic<size_t> receiveAppBufferHead_;
+    alignas(64) std::atomic<size_t> receiveAppBufferTail_;
+    alignas(64) std::atomic<bool> receiveFlag_;
+    alignas(64) std::mutex receiveBuffersProcessMutex_;
+
+    alignas(64) std::atomic<size_t> sendTlsBufferHead_;
+    alignas(64) std::atomic<size_t> sendTlsBufferTail_;
+    alignas(64) std::atomic<size_t> sendAppBufferHead_;
+    alignas(64) std::atomic<size_t> sendAppBufferTail_;
+    alignas(64) std::atomic<bool> sendFlag_;
+    alignas(64) std::mutex sendBuffersProcessMutex_;
+
+    SendBuffersProcessResult TryProcessSendBuffers();
+
+    ReceiveBuffersProcessResult TryProcessReceiveBuffers();
+
+    size_t GetReceiveTlsBufferSize() const
+    {
+        return GetRingBufferSize(BufferCapacity, receiveTlsBufferHead_.load(std::memory_order_relaxed), receiveTlsBufferTail_.load(std::memory_order_relaxed));
+    }
+
+    size_t GetReceiveAppBufferSize() const
+    {
+        return GetRingBufferSize(BufferCapacity, receiveAppBufferHead_.load(std::memory_order_relaxed), receiveAppBufferTail_.load(std::memory_order_relaxed));
+    }
+
+    size_t GetSendTlsBufferSize() const
+    {
+        return GetRingBufferSize(BufferCapacity, sendTlsBufferHead_.load(std::memory_order_relaxed), sendTlsBufferTail_.load(std::memory_order_relaxed));
+    }
+
+    size_t GetSendAppBufferSize() const
+    {
+        return GetRingBufferSize(BufferCapacity, sendAppBufferHead_.load(std::memory_order_relaxed), sendAppBufferTail_.load(std::memory_order_relaxed));
+    }
 };
 
 

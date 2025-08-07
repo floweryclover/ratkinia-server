@@ -5,7 +5,7 @@
 #ifndef AUTHMESSAGE_H
 #define AUTHMESSAGE_H
 
-#include "Errors.h"
+#include "ErrorMacros.h"
 #include <string>
 #include <bcrypt/bcrypt.h>
 #include <array>

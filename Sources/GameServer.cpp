@@ -5,7 +5,7 @@
 #include "GameServer.h"
 #include "Database.h"
 #include "MainServer.h"
-#include "Errors.h"
+#include "ErrorMacros.h"
 #include <pqxx/pqxx>
 
 #include "NetworkServer.h"

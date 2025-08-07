@@ -13,7 +13,7 @@ namespace RatkiniaProtocol
         uint16_t BodyLength;
     };
 
-    constexpr size_t MessageMaxSize = 65535 + sizeof(MessageHeader);
+    constexpr size_t MessageMaxSize = 4096 + sizeof(MessageHeader);
     constexpr size_t MessageHeaderSize = sizeof(MessageHeader);
 
     enum class CtsMessageType : uint16_t

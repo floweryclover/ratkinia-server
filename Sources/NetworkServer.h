@@ -10,7 +10,7 @@
 #include "NetworkServerChannel.h"
 #include "MainServerChannel.h"
 #include "Session.h"
-#include <ws2tcpip.h>
+#include <openssl/ssl.h>
 #include <WinSock2.h>
 #include <thread>
 #include <string>
@@ -45,6 +45,8 @@ private:
     NetworkServerChannel::SpscReceiver networkServerReceiver_;
     MainServerChannel::MpscSender mainServerSender_;
     GameServerChannel::MpscSender gameServerSender_;
+
+    SSL_CTX* sslCtx_;
 
     SOCKET listenSocket_;
     HANDLE iocpHandle_;
