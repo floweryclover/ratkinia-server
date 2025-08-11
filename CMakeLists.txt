@@ -8,16 +8,24 @@ find_package(protobuf CONFIG REQUIRED)
 find_package(OpenSSL CONFIG REQUIRED)
 find_package(libpqxx CONFIG REQUIRED)
 
-file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
-        "${CMAKE_CURRENT_SOURCE_DIR}/Sources/*.hpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/Sources/*.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/Sources/*.cc")
+file(GLOB_RECURSE SOURCE CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/Source/*.hpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Source/*.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/Source/*.cc")
 
 add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 
-add_executable(${PROJECT_NAME} ${SOURCES})
+add_executable(${PROJECT_NAME} ${SOURCE})
 
 add_link_options("/IGNORE:4099")
+
+target_include_directories(${PROJECT_NAME}
+        PRIVATE
+        "Source"
+        "Source/System"
+        "Source/GlobalObject"
+        "Source/RatkiniaProtocol"
+        "Source/Event")
 
 target_include_directories(${PROJECT_NAME} PRIVATE Thirdparty/libbcrypt/include)
 
