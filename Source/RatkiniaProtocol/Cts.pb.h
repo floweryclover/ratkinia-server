@@ -46,6 +46,9 @@ struct TableStruct_Cts_2eproto {
   static const ::uint32_t offsets[];
 };
 namespace RatkiniaProtocol {
+class CreateCharacter;
+struct CreateCharacterDefaultTypeInternal;
+extern CreateCharacterDefaultTypeInternal _CreateCharacter_default_instance_;
 class LoginRequest;
 struct LoginRequestDefaultTypeInternal;
 extern LoginRequestDefaultTypeInternal _LoginRequest_default_instance_;
@@ -172,23 +175,23 @@ class RegisterRequest final : public ::google::protobuf::MessageLite
 
   // accessors -------------------------------------------------------
   enum : int {
-    kIdFieldNumber = 1,
+    kAccountFieldNumber = 1,
     kPasswordFieldNumber = 2,
   };
-  // string id = 1;
-  void clear_id() ;
-  const std::string& id() const;
+  // string account = 1;
+  void clear_account() ;
+  const std::string& account() const;
   template <typename Arg_ = const std::string&, typename... Args_>
-  void set_id(Arg_&& arg, Args_... args);
-  std::string* mutable_id();
-  PROTOBUF_NODISCARD std::string* release_id();
-  void set_allocated_id(std::string* value);
+  void set_account(Arg_&& arg, Args_... args);
+  std::string* mutable_account();
+  PROTOBUF_NODISCARD std::string* release_account();
+  void set_allocated_account(std::string* value);
 
   private:
-  const std::string& _internal_id() const;
-  inline PROTOBUF_ALWAYS_INLINE void _internal_set_id(
+  const std::string& _internal_account() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_account(
       const std::string& value);
-  std::string* _internal_mutable_id();
+  std::string* _internal_mutable_account();
 
   public:
   // string password = 2;
@@ -213,7 +216,7 @@ class RegisterRequest final : public ::google::protobuf::MessageLite
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
       1, 2, 0,
-      51, 2>
+      56, 2>
       _table_;
 
   static constexpr const void* _raw_default_instance_ =
@@ -233,7 +236,7 @@ class RegisterRequest final : public ::google::protobuf::MessageLite
     inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
                           ::google::protobuf::Arena* arena, const Impl_& from,
                           const RegisterRequest& from_msg);
-    ::google::protobuf::internal::ArenaStringPtr id_;
+    ::google::protobuf::internal::ArenaStringPtr account_;
     ::google::protobuf::internal::ArenaStringPtr password_;
     mutable ::google::protobuf::internal::CachedSize _cached_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
@@ -350,23 +353,23 @@ class LoginRequest final : public ::google::protobuf::MessageLite
 
   // accessors -------------------------------------------------------
   enum : int {
-    kIdFieldNumber = 1,
+    kAccountFieldNumber = 1,
     kPasswordFieldNumber = 2,
   };
-  // string id = 1;
-  void clear_id() ;
-  const std::string& id() const;
+  // string account = 1;
+  void clear_account() ;
+  const std::string& account() const;
   template <typename Arg_ = const std::string&, typename... Args_>
-  void set_id(Arg_&& arg, Args_... args);
-  std::string* mutable_id();
-  PROTOBUF_NODISCARD std::string* release_id();
-  void set_allocated_id(std::string* value);
+  void set_account(Arg_&& arg, Args_... args);
+  std::string* mutable_account();
+  PROTOBUF_NODISCARD std::string* release_account();
+  void set_allocated_account(std::string* value);
 
   private:
-  const std::string& _internal_id() const;
-  inline PROTOBUF_ALWAYS_INLINE void _internal_set_id(
+  const std::string& _internal_account() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_account(
       const std::string& value);
-  std::string* _internal_mutable_id();
+  std::string* _internal_mutable_account();
 
   public:
   // string password = 2;
@@ -391,7 +394,7 @@ class LoginRequest final : public ::google::protobuf::MessageLite
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
       1, 2, 0,
-      48, 2>
+      53, 2>
       _table_;
 
   static constexpr const void* _raw_default_instance_ =
@@ -411,8 +414,168 @@ class LoginRequest final : public ::google::protobuf::MessageLite
     inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
                           ::google::protobuf::Arena* arena, const Impl_& from,
                           const LoginRequest& from_msg);
-    ::google::protobuf::internal::ArenaStringPtr id_;
+    ::google::protobuf::internal::ArenaStringPtr account_;
     ::google::protobuf::internal::ArenaStringPtr password_;
+    mutable ::google::protobuf::internal::CachedSize _cached_size_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_Cts_2eproto;
+};
+// -------------------------------------------------------------------
+
+class CreateCharacter final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:RatkiniaProtocol.CreateCharacter) */ {
+ public:
+  inline CreateCharacter() : CreateCharacter(nullptr) {}
+  ~CreateCharacter() override;
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR CreateCharacter(
+      ::google::protobuf::internal::ConstantInitialized);
+
+  inline CreateCharacter(const CreateCharacter& from) : CreateCharacter(nullptr, from) {}
+  inline CreateCharacter(CreateCharacter&& from) noexcept
+      : CreateCharacter(nullptr, std::move(from)) {}
+  inline CreateCharacter& operator=(const CreateCharacter& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline CreateCharacter& operator=(CreateCharacter&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetArena() == from.GetArena()
+#ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetArena() != nullptr
+#endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline std::string* mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<std::string>();
+  }
+
+  static const CreateCharacter& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const CreateCharacter* internal_default_instance() {
+    return reinterpret_cast<const CreateCharacter*>(
+        &_CreateCharacter_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 2;
+  friend void swap(CreateCharacter& a, CreateCharacter& b) { a.Swap(&b); }
+  inline void Swap(CreateCharacter* other) {
+    if (other == this) return;
+#ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() != nullptr && GetArena() == other->GetArena()) {
+#else   // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() == other->GetArena()) {
+#endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(CreateCharacter* other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  CreateCharacter* New(::google::protobuf::Arena* arena = nullptr) const final {
+    return ::google::protobuf::MessageLite::DefaultConstruct<CreateCharacter>(arena);
+  }
+  void CheckTypeAndMergeFrom(
+      const ::google::protobuf::MessageLite& from) final;
+  void CopyFrom(const CreateCharacter& from);
+  void MergeFrom(const CreateCharacter& from);
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() final;
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* _InternalSerialize(
+      ::uint8_t* target,
+      ::google::protobuf::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* arena);
+  void SharedDtor();
+  void InternalSwap(CreateCharacter* other);
+ private:
+  friend class ::google::protobuf::internal::AnyMetadata;
+  static ::absl::string_view FullMessageName() { return "RatkiniaProtocol.CreateCharacter"; }
+
+ protected:
+  explicit CreateCharacter(::google::protobuf::Arena* arena);
+  CreateCharacter(::google::protobuf::Arena* arena, const CreateCharacter& from);
+  CreateCharacter(::google::protobuf::Arena* arena, CreateCharacter&& from) noexcept
+      : CreateCharacter(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::MessageLite::ClassData* GetClassData() const final;
+
+ public:
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kNameFieldNumber = 1,
+  };
+  // string name = 1;
+  void clear_name() ;
+  const std::string& name() const;
+  template <typename Arg_ = const std::string&, typename... Args_>
+  void set_name(Arg_&& arg, Args_... args);
+  std::string* mutable_name();
+  PROTOBUF_NODISCARD std::string* release_name();
+  void set_allocated_name(std::string* value);
+
+  private:
+  const std::string& _internal_name() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_name(
+      const std::string& value);
+  std::string* _internal_mutable_name();
+
+  public:
+  // @@protoc_insertion_point(class_scope:RatkiniaProtocol.CreateCharacter)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<
+      0, 1, 0,
+      45, 2>
+      _table_;
+
+  static constexpr const void* _raw_default_instance_ =
+      &_CreateCharacter_default_instance_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(
+        ::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                          ::google::protobuf::Arena* arena);
+    inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                          ::google::protobuf::Arena* arena, const Impl_& from,
+                          const CreateCharacter& from_msg);
+    ::google::protobuf::internal::ArenaStringPtr name_;
     mutable ::google::protobuf::internal::CachedSize _cached_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -436,54 +599,54 @@ class LoginRequest final : public ::google::protobuf::MessageLite
 
 // LoginRequest
 
-// string id = 1;
-inline void LoginRequest::clear_id() {
+// string account = 1;
+inline void LoginRequest::clear_account() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.id_.ClearToEmpty();
+  _impl_.account_.ClearToEmpty();
 }
-inline const std::string& LoginRequest::id() const
+inline const std::string& LoginRequest::account() const
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_get:RatkiniaProtocol.LoginRequest.id)
-  return _internal_id();
+  // @@protoc_insertion_point(field_get:RatkiniaProtocol.LoginRequest.account)
+  return _internal_account();
 }
 template <typename Arg_, typename... Args_>
-inline PROTOBUF_ALWAYS_INLINE void LoginRequest::set_id(Arg_&& arg,
+inline PROTOBUF_ALWAYS_INLINE void LoginRequest::set_account(Arg_&& arg,
                                                      Args_... args) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.id_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
-  // @@protoc_insertion_point(field_set:RatkiniaProtocol.LoginRequest.id)
+  _impl_.account_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:RatkiniaProtocol.LoginRequest.account)
 }
-inline std::string* LoginRequest::mutable_id() ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  std::string* _s = _internal_mutable_id();
-  // @@protoc_insertion_point(field_mutable:RatkiniaProtocol.LoginRequest.id)
+inline std::string* LoginRequest::mutable_account() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  std::string* _s = _internal_mutable_account();
+  // @@protoc_insertion_point(field_mutable:RatkiniaProtocol.LoginRequest.account)
   return _s;
 }
-inline const std::string& LoginRequest::_internal_id() const {
+inline const std::string& LoginRequest::_internal_account() const {
   ::google::protobuf::internal::TSanRead(&_impl_);
-  return _impl_.id_.Get();
+  return _impl_.account_.Get();
 }
-inline void LoginRequest::_internal_set_id(const std::string& value) {
+inline void LoginRequest::_internal_set_account(const std::string& value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.id_.Set(value, GetArena());
+  _impl_.account_.Set(value, GetArena());
 }
-inline std::string* LoginRequest::_internal_mutable_id() {
+inline std::string* LoginRequest::_internal_mutable_account() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  return _impl_.id_.Mutable( GetArena());
+  return _impl_.account_.Mutable( GetArena());
 }
-inline std::string* LoginRequest::release_id() {
+inline std::string* LoginRequest::release_account() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  // @@protoc_insertion_point(field_release:RatkiniaProtocol.LoginRequest.id)
-  return _impl_.id_.Release();
+  // @@protoc_insertion_point(field_release:RatkiniaProtocol.LoginRequest.account)
+  return _impl_.account_.Release();
 }
-inline void LoginRequest::set_allocated_id(std::string* value) {
+inline void LoginRequest::set_allocated_account(std::string* value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.id_.SetAllocated(value, GetArena());
+  _impl_.account_.SetAllocated(value, GetArena());
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-        if (_impl_.id_.IsDefault()) {
-          _impl_.id_.Set("", GetArena());
+        if (_impl_.account_.IsDefault()) {
+          _impl_.account_.Set("", GetArena());
         }
   #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  // @@protoc_insertion_point(field_set_allocated:RatkiniaProtocol.LoginRequest.id)
+  // @@protoc_insertion_point(field_set_allocated:RatkiniaProtocol.LoginRequest.account)
 }
 
 // string password = 2;
@@ -540,54 +703,54 @@ inline void LoginRequest::set_allocated_password(std::string* value) {
 
 // RegisterRequest
 
-// string id = 1;
-inline void RegisterRequest::clear_id() {
+// string account = 1;
+inline void RegisterRequest::clear_account() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.id_.ClearToEmpty();
+  _impl_.account_.ClearToEmpty();
 }
-inline const std::string& RegisterRequest::id() const
+inline const std::string& RegisterRequest::account() const
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_get:RatkiniaProtocol.RegisterRequest.id)
-  return _internal_id();
+  // @@protoc_insertion_point(field_get:RatkiniaProtocol.RegisterRequest.account)
+  return _internal_account();
 }
 template <typename Arg_, typename... Args_>
-inline PROTOBUF_ALWAYS_INLINE void RegisterRequest::set_id(Arg_&& arg,
+inline PROTOBUF_ALWAYS_INLINE void RegisterRequest::set_account(Arg_&& arg,
                                                      Args_... args) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.id_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
-  // @@protoc_insertion_point(field_set:RatkiniaProtocol.RegisterRequest.id)
+  _impl_.account_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:RatkiniaProtocol.RegisterRequest.account)
 }
-inline std::string* RegisterRequest::mutable_id() ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  std::string* _s = _internal_mutable_id();
-  // @@protoc_insertion_point(field_mutable:RatkiniaProtocol.RegisterRequest.id)
+inline std::string* RegisterRequest::mutable_account() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  std::string* _s = _internal_mutable_account();
+  // @@protoc_insertion_point(field_mutable:RatkiniaProtocol.RegisterRequest.account)
   return _s;
 }
-inline const std::string& RegisterRequest::_internal_id() const {
+inline const std::string& RegisterRequest::_internal_account() const {
   ::google::protobuf::internal::TSanRead(&_impl_);
-  return _impl_.id_.Get();
+  return _impl_.account_.Get();
 }
-inline void RegisterRequest::_internal_set_id(const std::string& value) {
+inline void RegisterRequest::_internal_set_account(const std::string& value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.id_.Set(value, GetArena());
+  _impl_.account_.Set(value, GetArena());
 }
-inline std::string* RegisterRequest::_internal_mutable_id() {
+inline std::string* RegisterRequest::_internal_mutable_account() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  return _impl_.id_.Mutable( GetArena());
+  return _impl_.account_.Mutable( GetArena());
 }
-inline std::string* RegisterRequest::release_id() {
+inline std::string* RegisterRequest::release_account() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  // @@protoc_insertion_point(field_release:RatkiniaProtocol.RegisterRequest.id)
-  return _impl_.id_.Release();
+  // @@protoc_insertion_point(field_release:RatkiniaProtocol.RegisterRequest.account)
+  return _impl_.account_.Release();
 }
-inline void RegisterRequest::set_allocated_id(std::string* value) {
+inline void RegisterRequest::set_allocated_account(std::string* value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.id_.SetAllocated(value, GetArena());
+  _impl_.account_.SetAllocated(value, GetArena());
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-        if (_impl_.id_.IsDefault()) {
-          _impl_.id_.Set("", GetArena());
+        if (_impl_.account_.IsDefault()) {
+          _impl_.account_.Set("", GetArena());
         }
   #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  // @@protoc_insertion_point(field_set_allocated:RatkiniaProtocol.RegisterRequest.id)
+  // @@protoc_insertion_point(field_set_allocated:RatkiniaProtocol.RegisterRequest.account)
 }
 
 // string password = 2;
@@ -638,6 +801,60 @@ inline void RegisterRequest::set_allocated_password(std::string* value) {
         }
   #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   // @@protoc_insertion_point(field_set_allocated:RatkiniaProtocol.RegisterRequest.password)
+}
+
+// -------------------------------------------------------------------
+
+// CreateCharacter
+
+// string name = 1;
+inline void CreateCharacter::clear_name() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.name_.ClearToEmpty();
+}
+inline const std::string& CreateCharacter::name() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:RatkiniaProtocol.CreateCharacter.name)
+  return _internal_name();
+}
+template <typename Arg_, typename... Args_>
+inline PROTOBUF_ALWAYS_INLINE void CreateCharacter::set_name(Arg_&& arg,
+                                                     Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.name_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:RatkiniaProtocol.CreateCharacter.name)
+}
+inline std::string* CreateCharacter::mutable_name() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  std::string* _s = _internal_mutable_name();
+  // @@protoc_insertion_point(field_mutable:RatkiniaProtocol.CreateCharacter.name)
+  return _s;
+}
+inline const std::string& CreateCharacter::_internal_name() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.name_.Get();
+}
+inline void CreateCharacter::_internal_set_name(const std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.name_.Set(value, GetArena());
+}
+inline std::string* CreateCharacter::_internal_mutable_name() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.name_.Mutable( GetArena());
+}
+inline std::string* CreateCharacter::release_name() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:RatkiniaProtocol.CreateCharacter.name)
+  return _impl_.name_.Release();
+}
+inline void CreateCharacter::set_allocated_name(std::string* value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.name_.SetAllocated(value, GetArena());
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        if (_impl_.name_.IsDefault()) {
+          _impl_.name_.Set("", GetArena());
+        }
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:RatkiniaProtocol.CreateCharacter.name)
 }
 
 #ifdef __GNUC__

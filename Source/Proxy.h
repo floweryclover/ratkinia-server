@@ -8,10 +8,10 @@
 #include "RatkiniaProtocol/StcProxy.gen.h"
 #include "NetworkServer.h"
 
-class StcProxy final : public RatkiniaProtocol::StcProxy<StcProxy>
+class Proxy final : public RatkiniaProtocol::StcProxy<Proxy>
 {
 public:
-    explicit StcProxy(NetworkServer& networkServer)
+    explicit Proxy(NetworkServer& networkServer)
         : networkServer_{networkServer}
     {}
 

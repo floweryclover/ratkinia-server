@@ -5,6 +5,9 @@
 #ifndef GLOBALOBJECT_H
 #define GLOBALOBJECT_H
 
+#include "ErrorMacros.h"
+#include "RuntimeOrder.h"
+
 struct GlobalObject
 {
     explicit GlobalObject() = default;
@@ -24,5 +27,19 @@ inline GlobalObject::~GlobalObject()
 {
 }
 
+#define GLOBALOBJECT(TClass)                                                \
+    private:                                                                \
+        inline static uint32_t RuntimeOrder = UnregisteredRuntimeOrder;     \
+    public:                                                                 \
+        static uint32_t GetRuntimeOrder()                                   \
+        {                                                                   \
+            return RuntimeOrder;                                            \
+        }                                                                   \
+                                                                            \
+        static void SetRuntimeOrder(const uint32_t runtimeOrder)            \
+        {                                                                   \
+            CRASH_COND(RuntimeOrder != UnregisteredRuntimeOrder);           \
+            RuntimeOrder = runtimeOrder;                                    \
+        }
 
 #endif // GLOBALOBJECT_H

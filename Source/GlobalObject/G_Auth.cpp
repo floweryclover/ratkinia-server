@@ -10,23 +10,23 @@ G_Auth::G_Auth()
 {
 }
 
-G_Auth::ContextAddResult G_Auth::TryAddContext(const uint32_t context, const uint32_t id)
+G_Auth::AuthenticationResult G_Auth::TryAuthenticate(const uint32_t context, const uint32_t id)
 {
     if (contextIdMap_.contains(context))
     {
-        return ContextAddResult::DuplicateContext;
+        return AuthenticationResult::DuplicateContext;
     }
     if (idContextMap_.contains(id))
     {
-        return ContextAddResult::IdAlreadyOnline;
+        return AuthenticationResult::IdAlreadyOnline;
     }
 
     contextIdMap_.emplace(context, id);
     idContextMap_.emplace(id, context);
-    return ContextAddResult::Success;
+    return AuthenticationResult::Success;
 }
 
-void G_Auth::RemoveContext(const uint32_t context)
+void G_Auth::DeauthenticateByContext(const uint32_t context)
 {
     const auto contextIdPair = contextIdMap_.find(context);
     if (contextIdPair == contextIdMap_.end())
@@ -38,7 +38,7 @@ void G_Auth::RemoveContext(const uint32_t context)
     contextIdMap_.erase(contextIdPair);
 }
 
-void G_Auth::RemoveContextById(const uint32_t id)
+void G_Auth::DeauthenticateById(const uint32_t id)
 {
     const auto idContextPair = idContextMap_.find(id);
     if (idContextPair == idContextMap_.end())
@@ -52,7 +52,7 @@ void G_Auth::RemoveContextById(const uint32_t id)
 
 void G_Auth::AuthBackgroundThreadBody()
 {
-    MessagePrinter::WriteLine("GameServer Auth Thread 시작");
+    MessagePrinter::WriteLine("G_Auth 백그라운드 스레드 시작");
     while (!shouldAuthThreadStop_.load(std::memory_order_relaxed))
     {
         while (true)
@@ -91,5 +91,5 @@ void G_Auth::AuthBackgroundThreadBody()
             }
         }
     }
-    MessagePrinter::WriteLine("GameServer Auth Thread 종료");
+    MessagePrinter::WriteLine("G_Auth 백그라운드 스레드 종료");
 }

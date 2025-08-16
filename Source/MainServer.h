@@ -9,9 +9,10 @@
 #include "NetworkServer.h"
 #include "GlobalObjectManager.h"
 #include "EventManager.h"
+#include "Floweryclover/ParallelExecutor.h"
 #include "System.h"
-#include "CtsStub.h"
-#include "StcProxy.h"
+#include "Stub.h"
+#include "Proxy.h"
 #include "ErrorMacros.h"
 #include <pqxx/pqxx>
 #include <thread>
@@ -67,8 +68,9 @@ private:
     const std::string DbHost;
 
     NetworkServer networkServer_;
-    CtsStub ctsStub_;
-    StcProxy stcProxy_;
+    Floweryclover::ParallelExecutor executor_;
+    Stub stub_;
+    Proxy proxy_;
     pqxx::connection dbConnection_;
     std::thread thread_;
 

@@ -46,7 +46,7 @@ PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
 
 inline constexpr LoginResponse::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
-      : result_{static_cast< ::RatkiniaProtocol::LoginResponse_Result >(0)},
+      : result_{static_cast< ::RatkiniaProtocol::LoginResponse_LoginResult >(0)},
         _cached_size_{0} {}
 
 template <typename>
@@ -62,71 +62,156 @@ struct LoginResponseDefaultTypeInternal {
 
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 LoginResponseDefaultTypeInternal _LoginResponse_default_instance_;
+
+inline constexpr CreateCharacterResponse::Impl_::Impl_(
+    ::_pbi::ConstantInitialized) noexcept
+      : successful_{static_cast< ::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult >(0)},
+        _cached_size_{0} {}
+
+template <typename>
+PROTOBUF_CONSTEXPR CreateCharacterResponse::CreateCharacterResponse(::_pbi::ConstantInitialized)
+    : _impl_(::_pbi::ConstantInitialized()) {}
+struct CreateCharacterResponseDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR CreateCharacterResponseDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
+  ~CreateCharacterResponseDefaultTypeInternal() {}
+  union {
+    CreateCharacterResponse _instance;
+  };
+};
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 CreateCharacterResponseDefaultTypeInternal _CreateCharacterResponse_default_instance_;
 }  // namespace RatkiniaProtocol
 namespace RatkiniaProtocol {
-PROTOBUF_CONSTINIT const uint32_t LoginResponse_Result_internal_data_[] = {
+PROTOBUF_CONSTINIT const uint32_t LoginResponse_LoginResult_internal_data_[] = {
     262144u, 0u, };
-bool LoginResponse_Result_IsValid(int value) {
+bool LoginResponse_LoginResult_IsValid(int value) {
   return 0 <= value && value <= 3;
 }
 static ::google::protobuf::internal::ExplicitlyConstructed<std::string>
-    LoginResponse_Result_strings[4] = {};
+    LoginResponse_LoginResult_strings[4] = {};
 
-static const char LoginResponse_Result_names[] = {
+static const char LoginResponse_LoginResult_names[] = {
     "DuplicateAccount"
     "DuplicateContext"
     "Failure"
     "Success"
 };
 
-static const ::google::protobuf::internal::EnumEntry LoginResponse_Result_entries[] =
+static const ::google::protobuf::internal::EnumEntry LoginResponse_LoginResult_entries[] =
     {
-        {{&LoginResponse_Result_names[0], 16}, 3},
-        {{&LoginResponse_Result_names[16], 16}, 2},
-        {{&LoginResponse_Result_names[32], 7}, 1},
-        {{&LoginResponse_Result_names[39], 7}, 0},
+        {{&LoginResponse_LoginResult_names[0], 16}, 3},
+        {{&LoginResponse_LoginResult_names[16], 16}, 2},
+        {{&LoginResponse_LoginResult_names[32], 7}, 1},
+        {{&LoginResponse_LoginResult_names[39], 7}, 0},
 };
 
-static const int LoginResponse_Result_entries_by_number[] = {
+static const int LoginResponse_LoginResult_entries_by_number[] = {
     3,  // 0 -> Success
     2,  // 1 -> Failure
     1,  // 2 -> DuplicateContext
     0,  // 3 -> DuplicateAccount
 };
 
-const std::string& LoginResponse_Result_Name(LoginResponse_Result value) {
+const std::string& LoginResponse_LoginResult_Name(LoginResponse_LoginResult value) {
   static const bool kDummy =
       ::google::protobuf::internal::InitializeEnumStrings(
-          LoginResponse_Result_entries, LoginResponse_Result_entries_by_number,
-          4, LoginResponse_Result_strings);
+          LoginResponse_LoginResult_entries, LoginResponse_LoginResult_entries_by_number,
+          4, LoginResponse_LoginResult_strings);
   (void)kDummy;
 
   int idx = ::google::protobuf::internal::LookUpEnumName(
-      LoginResponse_Result_entries, LoginResponse_Result_entries_by_number, 4,
+      LoginResponse_LoginResult_entries, LoginResponse_LoginResult_entries_by_number, 4,
       value);
   return idx == -1 ? ::google::protobuf::internal::GetEmptyString()
-                   : LoginResponse_Result_strings[idx].get();
+                   : LoginResponse_LoginResult_strings[idx].get();
 }
 
-bool LoginResponse_Result_Parse(absl::string_view name, LoginResponse_Result* value) {
+bool LoginResponse_LoginResult_Parse(absl::string_view name, LoginResponse_LoginResult* value) {
   int int_value;
   bool success = ::google::protobuf::internal::LookUpEnumValue(
-      LoginResponse_Result_entries, 4, name, &int_value);
+      LoginResponse_LoginResult_entries, 4, name, &int_value);
   if (success) {
-    *value = static_cast<LoginResponse_Result>(int_value);
+    *value = static_cast<LoginResponse_LoginResult>(int_value);
   }
   return success;
 }
 #if (__cplusplus < 201703) && \
   (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
 
-constexpr LoginResponse_Result LoginResponse::Success;
-constexpr LoginResponse_Result LoginResponse::Failure;
-constexpr LoginResponse_Result LoginResponse::DuplicateContext;
-constexpr LoginResponse_Result LoginResponse::DuplicateAccount;
-constexpr LoginResponse_Result LoginResponse::Result_MIN;
-constexpr LoginResponse_Result LoginResponse::Result_MAX;
-constexpr int LoginResponse::Result_ARRAYSIZE;
+constexpr LoginResponse_LoginResult LoginResponse::Success;
+constexpr LoginResponse_LoginResult LoginResponse::Failure;
+constexpr LoginResponse_LoginResult LoginResponse::DuplicateContext;
+constexpr LoginResponse_LoginResult LoginResponse::DuplicateAccount;
+constexpr LoginResponse_LoginResult LoginResponse::LoginResult_MIN;
+constexpr LoginResponse_LoginResult LoginResponse::LoginResult_MAX;
+constexpr int LoginResponse::LoginResult_ARRAYSIZE;
+
+#endif  // (__cplusplus < 201703) &&
+        // (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
+PROTOBUF_CONSTINIT const uint32_t CreateCharacterResponse_CreateCharacterResult_internal_data_[] = {
+    262144u, 0u, };
+bool CreateCharacterResponse_CreateCharacterResult_IsValid(int value) {
+  return 0 <= value && value <= 3;
+}
+static ::google::protobuf::internal::ExplicitlyConstructed<std::string>
+    CreateCharacterResponse_CreateCharacterResult_strings[4] = {};
+
+static const char CreateCharacterResponse_CreateCharacterResult_names[] = {
+    "DuplicateName"
+    "InvalidNameLength"
+    "Success"
+    "UnknownError"
+};
+
+static const ::google::protobuf::internal::EnumEntry CreateCharacterResponse_CreateCharacterResult_entries[] =
+    {
+        {{&CreateCharacterResponse_CreateCharacterResult_names[0], 13}, 2},
+        {{&CreateCharacterResponse_CreateCharacterResult_names[13], 17}, 1},
+        {{&CreateCharacterResponse_CreateCharacterResult_names[30], 7}, 0},
+        {{&CreateCharacterResponse_CreateCharacterResult_names[37], 12}, 3},
+};
+
+static const int CreateCharacterResponse_CreateCharacterResult_entries_by_number[] = {
+    2,  // 0 -> Success
+    1,  // 1 -> InvalidNameLength
+    0,  // 2 -> DuplicateName
+    3,  // 3 -> UnknownError
+};
+
+const std::string& CreateCharacterResponse_CreateCharacterResult_Name(CreateCharacterResponse_CreateCharacterResult value) {
+  static const bool kDummy =
+      ::google::protobuf::internal::InitializeEnumStrings(
+          CreateCharacterResponse_CreateCharacterResult_entries, CreateCharacterResponse_CreateCharacterResult_entries_by_number,
+          4, CreateCharacterResponse_CreateCharacterResult_strings);
+  (void)kDummy;
+
+  int idx = ::google::protobuf::internal::LookUpEnumName(
+      CreateCharacterResponse_CreateCharacterResult_entries, CreateCharacterResponse_CreateCharacterResult_entries_by_number, 4,
+      value);
+  return idx == -1 ? ::google::protobuf::internal::GetEmptyString()
+                   : CreateCharacterResponse_CreateCharacterResult_strings[idx].get();
+}
+
+bool CreateCharacterResponse_CreateCharacterResult_Parse(absl::string_view name, CreateCharacterResponse_CreateCharacterResult* value) {
+  int int_value;
+  bool success = ::google::protobuf::internal::LookUpEnumValue(
+      CreateCharacterResponse_CreateCharacterResult_entries, 4, name, &int_value);
+  if (success) {
+    *value = static_cast<CreateCharacterResponse_CreateCharacterResult>(int_value);
+  }
+  return success;
+}
+#if (__cplusplus < 201703) && \
+  (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
+
+constexpr CreateCharacterResponse_CreateCharacterResult CreateCharacterResponse::Success;
+constexpr CreateCharacterResponse_CreateCharacterResult CreateCharacterResponse::InvalidNameLength;
+constexpr CreateCharacterResponse_CreateCharacterResult CreateCharacterResponse::DuplicateName;
+constexpr CreateCharacterResponse_CreateCharacterResult CreateCharacterResponse::UnknownError;
+constexpr CreateCharacterResponse_CreateCharacterResult CreateCharacterResponse::CreateCharacterResult_MIN;
+constexpr CreateCharacterResponse_CreateCharacterResult CreateCharacterResponse::CreateCharacterResult_MAX;
+constexpr int CreateCharacterResponse::CreateCharacterResult_ARRAYSIZE;
 
 #endif  // (__cplusplus < 201703) &&
         // (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
@@ -200,13 +285,13 @@ const ::_pbi::TcParseTable<0, 1, 0, 0, 2> LoginResponse::_table_ = {
     ::_pbi::TcParser::GetTable<::RatkiniaProtocol::LoginResponse>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    // .RatkiniaProtocol.LoginResponse.Result result = 1;
+    // .RatkiniaProtocol.LoginResponse.LoginResult result = 1;
     {::_pbi::TcParser::FastV32S1,
      {8, 63, 0, PROTOBUF_FIELD_OFFSET(LoginResponse, _impl_.result_)}},
   }}, {{
     65535, 65535
   }}, {{
-    // .RatkiniaProtocol.LoginResponse.Result result = 1;
+    // .RatkiniaProtocol.LoginResponse.LoginResult result = 1;
     {PROTOBUF_FIELD_OFFSET(LoginResponse, _impl_.result_), 0, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kOpenEnum)},
   }},
@@ -233,7 +318,7 @@ PROTOBUF_NOINLINE void LoginResponse::Clear() {
   ::uint32_t cached_has_bits = 0;
   (void)cached_has_bits;
 
-  // .RatkiniaProtocol.LoginResponse.Result result = 1;
+  // .RatkiniaProtocol.LoginResponse.LoginResult result = 1;
   if (this->_internal_result() != 0) {
     target = stream->EnsureSpace(target);
     target = ::_pbi::WireFormatLite::WriteEnumToArray(
@@ -257,7 +342,7 @@ PROTOBUF_NOINLINE void LoginResponse::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // .RatkiniaProtocol.LoginResponse.Result result = 1;
+  // .RatkiniaProtocol.LoginResponse.LoginResult result = 1;
   if (this->_internal_result() != 0) {
     total_size += 1 +
                   ::_pbi::WireFormatLite::EnumSize(this->_internal_result());
@@ -520,6 +605,179 @@ void RegisterResponse::InternalSwap(RegisterResponse* PROTOBUF_RESTRICT other) {
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.failed_reason_, &other->_impl_.failed_reason_, arena);
         swap(_impl_.successful_, other->_impl_.successful_);
+}
+
+// ===================================================================
+
+class CreateCharacterResponse::_Internal {
+ public:
+};
+
+CreateCharacterResponse::CreateCharacterResponse(::google::protobuf::Arena* arena)
+    : ::google::protobuf::MessageLite(arena) {
+  SharedCtor(arena);
+  // @@protoc_insertion_point(arena_constructor:RatkiniaProtocol.CreateCharacterResponse)
+}
+CreateCharacterResponse::CreateCharacterResponse(
+    ::google::protobuf::Arena* arena, const CreateCharacterResponse& from)
+    : CreateCharacterResponse(arena) {
+  MergeFrom(from);
+}
+inline PROTOBUF_NDEBUG_INLINE CreateCharacterResponse::Impl_::Impl_(
+    ::google::protobuf::internal::InternalVisibility visibility,
+    ::google::protobuf::Arena* arena)
+      : _cached_size_{0} {}
+
+inline void CreateCharacterResponse::SharedCtor(::_pb::Arena* arena) {
+  new (&_impl_) Impl_(internal_visibility(), arena);
+  _impl_.successful_ = {};
+}
+CreateCharacterResponse::~CreateCharacterResponse() {
+  // @@protoc_insertion_point(destructor:RatkiniaProtocol.CreateCharacterResponse)
+  _internal_metadata_.Delete<std::string>();
+  SharedDtor();
+}
+inline void CreateCharacterResponse::SharedDtor() {
+  ABSL_DCHECK(GetArena() == nullptr);
+  _impl_.~Impl_();
+}
+
+const ::google::protobuf::MessageLite::ClassData*
+CreateCharacterResponse::GetClassData() const {
+  PROTOBUF_CONSTINIT static const ClassDataLite<41> _data_ =
+      {
+          {
+              &_table_.header,
+              nullptr,  // OnDemandRegisterArenaDtor
+              nullptr,  // IsInitialized
+              PROTOBUF_FIELD_OFFSET(CreateCharacterResponse, _impl_._cached_size_),
+              true,
+          },
+          "RatkiniaProtocol.CreateCharacterResponse",
+      };
+
+  return _data_.base();
+}
+PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
+const ::_pbi::TcParseTable<0, 1, 0, 0, 2> CreateCharacterResponse::_table_ = {
+  {
+    0,  // no _has_bits_
+    0, // no _extensions_
+    1, 0,  // max_field_number, fast_idx_mask
+    offsetof(decltype(_table_), field_lookup_table),
+    4294967294,  // skipmap
+    offsetof(decltype(_table_), field_entries),
+    1,  // num_field_entries
+    0,  // num_aux_entries
+    offsetof(decltype(_table_), field_names),  // no aux_entries
+    &_CreateCharacterResponse_default_instance_._instance,
+    nullptr,  // post_loop_handler
+    ::_pbi::TcParser::GenericFallbackLite,  // fallback
+    #ifdef PROTOBUF_PREFETCH_PARSE_TABLE
+    ::_pbi::TcParser::GetTable<::RatkiniaProtocol::CreateCharacterResponse>(),  // to_prefetch
+    #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
+  }, {{
+    // .RatkiniaProtocol.CreateCharacterResponse.CreateCharacterResult successful = 1;
+    {::_pbi::TcParser::FastV32S1,
+     {8, 63, 0, PROTOBUF_FIELD_OFFSET(CreateCharacterResponse, _impl_.successful_)}},
+  }}, {{
+    65535, 65535
+  }}, {{
+    // .RatkiniaProtocol.CreateCharacterResponse.CreateCharacterResult successful = 1;
+    {PROTOBUF_FIELD_OFFSET(CreateCharacterResponse, _impl_.successful_), 0, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kOpenEnum)},
+  }},
+  // no aux_entries
+  {{
+  }},
+};
+
+PROTOBUF_NOINLINE void CreateCharacterResponse::Clear() {
+// @@protoc_insertion_point(message_clear_start:RatkiniaProtocol.CreateCharacterResponse)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.successful_ = 0;
+  _internal_metadata_.Clear<std::string>();
+}
+
+::uint8_t* CreateCharacterResponse::_InternalSerialize(
+    ::uint8_t* target,
+    ::google::protobuf::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:RatkiniaProtocol.CreateCharacterResponse)
+  ::uint32_t cached_has_bits = 0;
+  (void)cached_has_bits;
+
+  // .RatkiniaProtocol.CreateCharacterResponse.CreateCharacterResult successful = 1;
+  if (this->_internal_successful() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteEnumToArray(
+        1, this->_internal_successful(), target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = stream->WriteRaw(
+        _internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString).data(),
+        static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString).size()), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:RatkiniaProtocol.CreateCharacterResponse)
+  return target;
+}
+
+::size_t CreateCharacterResponse::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:RatkiniaProtocol.CreateCharacterResponse)
+  ::size_t total_size = 0;
+
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // .RatkiniaProtocol.CreateCharacterResponse.CreateCharacterResult successful = 1;
+  if (this->_internal_successful() != 0) {
+    total_size += 1 +
+                  ::_pbi::WireFormatLite::EnumSize(this->_internal_successful());
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    total_size += _internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString).size();
+  }
+  _impl_._cached_size_.Set(::_pbi::ToCachedSize(total_size));
+  return total_size;
+}
+
+void CreateCharacterResponse::CheckTypeAndMergeFrom(
+    const ::google::protobuf::MessageLite& from) {
+  MergeFrom(*::_pbi::DownCast<const CreateCharacterResponse*>(
+      &from));
+}
+
+void CreateCharacterResponse::MergeFrom(const CreateCharacterResponse& from) {
+  CreateCharacterResponse* const _this = this;
+  // @@protoc_insertion_point(class_specific_merge_from_start:RatkiniaProtocol.CreateCharacterResponse)
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (from._internal_successful() != 0) {
+    _this->_impl_.successful_ = from._impl_.successful_;
+  }
+  _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+}
+
+void CreateCharacterResponse::CopyFrom(const CreateCharacterResponse& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:RatkiniaProtocol.CreateCharacterResponse)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+
+void CreateCharacterResponse::InternalSwap(CreateCharacterResponse* PROTOBUF_RESTRICT other) {
+  using std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  swap(_impl_.successful_, other->_impl_.successful_);
 }
 
 // @@protoc_insertion_point(namespace_scope)

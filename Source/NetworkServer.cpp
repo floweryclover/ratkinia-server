@@ -105,6 +105,26 @@ std::optional<uint32_t> NetworkServer::TryClearClosedSession()
     }
 
     const uint32_t context = pendingSessionsToErase_.back();
+    auto& session = sessions_.at(context);
+
+    const int eraseIndex = [&]
+    {
+        int index;
+        for (index = 0; index < sessionArray_.size(); ++index)
+        {
+            if (sessionArray_[index] == &session)
+            {
+                break;
+            }
+        }
+        return index;
+    }();
+
+    CRASH_COND(eraseIndex == sessionArray_.size());
+
+    sessionArray_[eraseIndex] = sessionArray_.back();
+    sessionArray_.pop_back();
+
     sessions_.erase(context);
     pendingSessionsToErase_.pop_back();
     return context;
@@ -145,6 +165,7 @@ void NetworkServer::PrepareAcceptPool()
                                                 std::forward_as_tuple(Iocp, newClientSocket, ssl, newSessionId_));
         auto& session = iter->second;
         availableAcceptContext->Session = &session;
+        sessionArray_.push_back(&session);
 
         CRASH_COND(!session.TryAcceptAsync(ListenSocket, reinterpret_cast<LPOVERLAPPED>(availableAcceptContext)));
         acceptingSessionsCount_.fetch_add(1, std::memory_order_relaxed);

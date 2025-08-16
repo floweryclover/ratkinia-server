@@ -15,25 +15,22 @@
 
 struct G_Auth final : GlobalObject
 {
-    enum class ContextAddResult : uint8_t
+    GLOBALOBJECT(G_Auth)
+
+    enum class AuthenticationResult : uint8_t
     {
         Success,
         DuplicateContext,
         IdAlreadyOnline,
     };
 
-    static uint32_t GetRuntimeOrder()
-    {
-        return 0;
-    }
-
     explicit G_Auth();
 
-    ContextAddResult TryAddContext(uint32_t context, uint32_t id);
+    AuthenticationResult TryAuthenticate(uint32_t context, uint32_t id);
 
-    void RemoveContext(uint32_t context);
+    void DeauthenticateByContext(uint32_t context);
 
-    void RemoveContextById(uint32_t id);
+    void DeauthenticateById(uint32_t id);
 
     std::optional<AuthJob> TryPopFinishedBackgroundJob()
     {
@@ -50,12 +47,12 @@ struct G_Auth final : GlobalObject
         return std::make_optional(std::move(returnValue));
     }
 
-    std::optional<uint32_t> GetLoginIdOfContext(const uint32_t context)
+    std::optional<uint32_t> TryGetIdOfContext(const uint32_t context)
     {
         return contextIdMap_.contains(context) ? std::make_optional(contextIdMap_.at(context)) : std::nullopt;
     }
 
-    std::optional<uint32_t> GetLoginContextOfId(const uint32_t id)
+    std::optional<uint32_t> TryGetContextOfId(const uint32_t id)
     {
         return idContextMap_.contains(id) ? std::make_optional(idContextMap_.at(id)) : std::nullopt;
     }

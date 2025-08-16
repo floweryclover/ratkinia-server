@@ -16,16 +16,9 @@ public:
     template<typename TGlobalObject, typename ...Args>
     void Register(Args&&... args)
     {
-        const uint32_t runtimeOrder = TGlobalObject::GetRuntimeOrder();
-        const bool isNotRegistered = runtimeOrder == (std::numeric_limits<uint32_t>::max)();
-        CRASH_COND(isNotRegistered);
-
-        if (globalObjects_.size() <= runtimeOrder)
-        {
-            globalObjects_.resize(runtimeOrder + 1);
-        }
-
-        globalObjects_[runtimeOrder] = std::make_unique<TGlobalObject>(std::forward<Args>(args)...);
+        const uint32_t runtimeOrder = globalObjects_.size();
+        TGlobalObject::SetRuntimeOrder(runtimeOrder);
+        globalObjects_.emplace_back(std::make_unique<TGlobalObject>(std::forward<Args>(args)...));
     }
 
     template<typename TGlobalObject>

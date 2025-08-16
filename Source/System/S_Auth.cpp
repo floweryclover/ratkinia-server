@@ -8,7 +8,7 @@
 #include "GlobalObjectManager.h"
 #include "EventManager.h"
 #include "G_Auth.h"
-#include "StcProxy.h"
+#include "Proxy.h"
 #include <pqxx/pqxx>
 
 using namespace Database;
@@ -20,7 +20,7 @@ void S_Auth(const MutableEnvironment& environment)
 
     for (const auto& event_sessionErased : environment.EventManager.Events<Event_SessionErased>())
     {
-        g_auth->RemoveContext(event_sessionErased.Context);
+        g_auth->DeauthenticateByContext(event_sessionErased.Context);
     }
 
     while (const auto job = g_auth->TryPopFinishedBackgroundJob())
@@ -31,25 +31,25 @@ void S_Auth(const MutableEnvironment& environment)
 
             if (!loginJob.IsPasswordMatch())
             {
-                environment.StcProxy.LoginResponse(loginJob.Context, RatkiniaProtocol::LoginResponse_Result_Failure);
+                environment.Proxy.LoginResponse(loginJob.Context, RatkiniaProtocol::LoginResponse_LoginResult_Failure);
                 return;
             }
 
-            const auto contextAddResult = g_auth->TryAddContext(loginJob.Context, loginJob.Id);
+            const auto contextAddResult = g_auth->TryAuthenticate(loginJob.Context, loginJob.Id);
 
-            if (contextAddResult == G_Auth::ContextAddResult::Success)
+            if (contextAddResult == G_Auth::AuthenticationResult::Success)
             {
-                environment.StcProxy.LoginResponse(loginJob.Context, RatkiniaProtocol::LoginResponse_Result_Success);
+                environment.Proxy.LoginResponse(loginJob.Context, RatkiniaProtocol::LoginResponse_LoginResult_Success);
             }
-            else if (contextAddResult == G_Auth::ContextAddResult::IdAlreadyOnline)
+            else if (contextAddResult == G_Auth::AuthenticationResult::IdAlreadyOnline)
             {
-                environment.StcProxy.LoginResponse(loginJob.Context,
-                                                   RatkiniaProtocol::LoginResponse_Result_DuplicateAccount);
+                environment.Proxy.LoginResponse(loginJob.Context,
+                                                   RatkiniaProtocol::LoginResponse_LoginResult_DuplicateAccount);
             }
             else
             {
-                environment.StcProxy.LoginResponse(loginJob.Context,
-                                                   RatkiniaProtocol::LoginResponse_Result_DuplicateContext);
+                environment.Proxy.LoginResponse(loginJob.Context,
+                                                   RatkiniaProtocol::LoginResponse_LoginResult_DuplicateContext);
             }
         }
         else
@@ -59,11 +59,11 @@ void S_Auth(const MutableEnvironment& environment)
             if (const auto sameIdSearchResult = sameIdSearchWork.exec(Prepped_FindUserId, registerJob.Id);
                 !sameIdSearchResult.empty())
             {
-                environment.StcProxy.RegisterResponse(registerJob.Context, false, "중복된 ID입니다.");
+                environment.Proxy.RegisterResponse(registerJob.Context, false, "중복된 ID입니다.");
                 return;
             }
             work insertAccountWork{ environment.DbConnection };
-            const auto insertAccountResult = insertAccountWork.exec(Prepped_InsertAccount,
+            const auto insertAccountResult = insertAccountWork.exec(Prepped_CreateAccount,
                                                                     params{
                                                                         registerJob.Id, registerJob.GetHashedPassword()
                                                                     });
@@ -71,7 +71,7 @@ void S_Auth(const MutableEnvironment& environment)
 
             const bool isSuccessful = insertAccountResult.affected_rows() == 1;
             CRASH_COND(!isSuccessful);
-            environment.StcProxy.RegisterResponse(registerJob.Context, true, "");
+            environment.Proxy.RegisterResponse(registerJob.Context, true, "");
         }
     }
 }

@@ -10,7 +10,9 @@
 namespace Database
 {
     inline static pqxx::prepped Prepped_FindUserId{ "find_user_id" };
-    inline static pqxx::prepped Prepped_InsertAccount{ "insert_account" };
+    inline static pqxx::prepped Prepped_CreateAccount{ "create_account" };
+    inline static pqxx::prepped Prepped_FindPlayerCharacterByName{ "find_player_character_by_name" };
+    inline static pqxx::prepped Prepped_CreatePlayerCharacter{ "create_player_character" };
 }
 
 #endif //DATABASE_H

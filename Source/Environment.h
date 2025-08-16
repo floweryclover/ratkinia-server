@@ -5,7 +5,7 @@
 #ifndef ENVIRONMENT_H
 #define ENVIRONMENT_H
 
-class StcProxy;
+class Proxy;
 
 namespace pqxx
 {
@@ -26,7 +26,7 @@ struct MutableEnvironment final
     GlobalObjectManager& GlobalObjectManager;
     EventManager& EventManager;
     pqxx::connection& DbConnection;
-    StcProxy& StcProxy;
+    Proxy& Proxy;
 
     ImmutableEnvironment operator()()
     {

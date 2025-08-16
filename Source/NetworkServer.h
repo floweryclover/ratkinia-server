@@ -58,6 +58,17 @@ public:
         }
     }
 
+    [[nodiscard]]
+    // ReSharper disable once CppMemberFunctionMayBeConst
+    std::optional<SessionReceiveBufferOnlyWrapper> GetSessionReceiveBufferByWorkIndex(const uint32_t workIndex)
+    {
+        if (workIndex >= sessions_.size())
+        {
+            return std::nullopt;
+        }
+
+        return SessionReceiveBufferOnlyWrapper{*sessionArray_[workIndex]};
+    }
 
 private:
     struct AcceptContext final
@@ -74,6 +85,7 @@ private:
 
     uint32_t newSessionId_;
     std::unordered_map<uint32_t, Session> sessions_;
+    std::vector<Session*> sessionArray_;
     std::unique_ptr<AcceptContext[]> acceptContexts_;
 
     std::vector<std::thread> workerThreads_;

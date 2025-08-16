@@ -2,17 +2,17 @@
 // Created by floweryclover on 2025-05-05.
 //
 
-#ifndef RATKINIASERVER_CTSSTUB_H
-#define RATKINIASERVER_CTSSTUB_H
+#ifndef RATKINIASERVER_STUB_H
+#define RATKINIASERVER_STUB_H
 
 #include "CtsStub.gen.h"
 
 struct MutableEnvironment;
 
-class CtsStub final : public RatkiniaProtocol::CtsStub<CtsStub>
+class Stub final : public RatkiniaProtocol::CtsStub<Stub>
 {
 public:
-    explicit CtsStub(MutableEnvironment& environment);
+    explicit Stub(MutableEnvironment& environment);
 
     void OnParseMessageFailed(uint32_t context,
                               RatkiniaProtocol::CtsMessageType messageType) override;
@@ -28,8 +28,10 @@ public:
                            const std::string& id,
                            const std::string& password) override;
 
+    void OnCreateCharacter(uint32_t context, const std::string& name) override;
+
 private:
     MutableEnvironment& environment_;
 };
 
-#endif //RATKINIASERVER_CTSSTUB_H
+#endif //RATKINIASERVER_STUB_H

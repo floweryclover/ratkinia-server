@@ -322,12 +322,12 @@ std::optional<Session::MessagePeekResult> Session::TryPeekMessage()
              ReceiveAppBuffer.get(),
              secondaryHeaderSize);
     header.MessageType = ntohs(header.MessageType);
-    header.BodyLength = ntohs(header.BodyLength);
+    header.BodySize = ntohs(header.BodySize);
 
     const auto readableBodySizes = GetReadableSizes(BufferCapacity,
                                                     (loadedHead + MessageHeaderSize) % BufferCapacity,
                                                     loadedTail,
-                                                    header.BodyLength);
+                                                    header.BodySize);
     if (!readableBodySizes)
     {
         return std::nullopt;
@@ -335,11 +335,11 @@ std::optional<Session::MessagePeekResult> Session::TryPeekMessage()
     const auto [primaryBodySize, secondaryBodySize] = *readableBodySizes;
     const size_t bodyHead = (loadedHead + MessageHeaderSize) % BufferCapacity;
 
-    if (primaryBodySize == header.BodyLength)
+    if (primaryBodySize == header.BodySize)
     {
         return std::make_optional<MessagePeekResult>(
             header.MessageType,
-            header.BodyLength,
+            header.BodySize,
             ReceiveAppBuffer.get() + bodyHead);
     }
 
@@ -353,7 +353,7 @@ std::optional<Session::MessagePeekResult> Session::TryPeekMessage()
              secondaryBodySize);
     return std::make_optional<MessagePeekResult>(
         header.MessageType,
-        header.BodyLength,
+        header.BodySize,
         ReceiveContiguousPopBuffer.get());
 }
 

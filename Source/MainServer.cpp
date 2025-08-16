@@ -27,13 +27,16 @@ MainServer::MainServer(std::string listenAddress,
           certificateFile,
           privateKeyFile
       },
-      ctsStub_{ environment_ },
-      stcProxy_{ networkServer_ },
+      executor_{ std::thread::hardware_concurrency(), 1024 },
+      stub_{ environment_ },
+      proxy_{ networkServer_ },
       dbConnection_{ DbHost },
-      environment_{ globalObjectManager_, eventManager_, dbConnection_, stcProxy_ }
+      environment_{ globalObjectManager_, eventManager_, dbConnection_, proxy_ }
 {
-    dbConnection_.prepare(Prepped_FindUserId, "SELECT * FROM auth.accounts WHERE user_id = $1");
-    dbConnection_.prepare(Prepped_InsertAccount, "INSERT INTO auth.accounts (user_id, password) VALUES ($1, $2)");
+    dbConnection_.prepare(Prepped_FindUserId, "SELECT * FROM player.accounts WHERE account = $1");
+    dbConnection_.prepare(Prepped_CreateAccount, "INSERT INTO player.accounts (account, password) VALUES ($1, $2)");
+    dbConnection_.prepare(Prepped_FindPlayerCharacterByName, "SELECT * FROM player.characters WHERE name = $1");
+    dbConnection_.prepare(Prepped_CreatePlayerCharacter, "INSERT INTO player.characters (player_id, name) VALUES ($1, $2)");
 }
 
 void MainServer::Run()
@@ -47,15 +50,15 @@ void MainServer::Run()
         }
         networkServer_.PrepareAcceptPool();
 
-        for (auto buffer : networkServer_.SessionReceiveBuffers())
+        for (auto session : networkServer_.SessionReceiveBuffers())
         {
-            while (const auto message = buffer.TryPeek())
+            while (const auto message = session.TryPeek())
             {
-                ctsStub_.HandleCts(buffer.Context,
+                stub_.HandleCts(session.Context,
                                    message->MessageType,
                                    message->BodySize,
                                    message->Body);
-                buffer.Pop(RatkiniaProtocol::MessageHeaderSize + message->BodySize);
+                session.Pop(RatkiniaProtocol::MessageHeaderSize + message->BodySize);
             }
         }
 
