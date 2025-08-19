@@ -22,6 +22,28 @@ namespace _pbi = ::google::protobuf::internal;
 namespace _fl = ::google::protobuf::internal::field_layout;
 namespace RatkiniaProtocol {
 
+inline constexpr SendMyCharacters_CharacterLoadData::Impl_::Impl_(
+    ::_pbi::ConstantInitialized) noexcept
+      : name_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
+        id_{0u},
+        _cached_size_{0} {}
+
+template <typename>
+PROTOBUF_CONSTEXPR SendMyCharacters_CharacterLoadData::SendMyCharacters_CharacterLoadData(::_pbi::ConstantInitialized)
+    : _impl_(::_pbi::ConstantInitialized()) {}
+struct SendMyCharacters_CharacterLoadDataDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR SendMyCharacters_CharacterLoadDataDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
+  ~SendMyCharacters_CharacterLoadDataDefaultTypeInternal() {}
+  union {
+    SendMyCharacters_CharacterLoadData _instance;
+  };
+};
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 SendMyCharacters_CharacterLoadDataDefaultTypeInternal _SendMyCharacters_CharacterLoadData_default_instance_;
+
 inline constexpr RegisterResponse::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
       : failed_reason_(
@@ -63,9 +85,30 @@ struct LoginResponseDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 LoginResponseDefaultTypeInternal _LoginResponse_default_instance_;
 
+inline constexpr Disconnect::Impl_::Impl_(
+    ::_pbi::ConstantInitialized) noexcept
+      : detail_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
+        _cached_size_{0} {}
+
+template <typename>
+PROTOBUF_CONSTEXPR Disconnect::Disconnect(::_pbi::ConstantInitialized)
+    : _impl_(::_pbi::ConstantInitialized()) {}
+struct DisconnectDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR DisconnectDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
+  ~DisconnectDefaultTypeInternal() {}
+  union {
+    Disconnect _instance;
+  };
+};
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 DisconnectDefaultTypeInternal _Disconnect_default_instance_;
+
 inline constexpr CreateCharacterResponse::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
-      : successful_{static_cast< ::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult >(0)},
+      : result_{static_cast< ::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult >(0)},
         _cached_size_{0} {}
 
 template <typename>
@@ -81,6 +124,25 @@ struct CreateCharacterResponseDefaultTypeInternal {
 
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 CreateCharacterResponseDefaultTypeInternal _CreateCharacterResponse_default_instance_;
+
+inline constexpr SendMyCharacters::Impl_::Impl_(
+    ::_pbi::ConstantInitialized) noexcept
+      : character_load_datas_{},
+        _cached_size_{0} {}
+
+template <typename>
+PROTOBUF_CONSTEXPR SendMyCharacters::SendMyCharacters(::_pbi::ConstantInitialized)
+    : _impl_(::_pbi::ConstantInitialized()) {}
+struct SendMyCharactersDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR SendMyCharactersDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
+  ~SendMyCharactersDefaultTypeInternal() {}
+  union {
+    SendMyCharacters _instance;
+  };
+};
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 SendMyCharactersDefaultTypeInternal _SendMyCharacters_default_instance_;
 }  // namespace RatkiniaProtocol
 namespace RatkiniaProtocol {
 PROTOBUF_CONSTINIT const uint32_t LoginResponse_LoginResult_internal_data_[] = {
@@ -215,6 +277,199 @@ constexpr int CreateCharacterResponse::CreateCharacterResult_ARRAYSIZE;
 
 #endif  // (__cplusplus < 201703) &&
         // (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
+// ===================================================================
+
+class Disconnect::_Internal {
+ public:
+};
+
+Disconnect::Disconnect(::google::protobuf::Arena* arena)
+    : ::google::protobuf::MessageLite(arena) {
+  SharedCtor(arena);
+  // @@protoc_insertion_point(arena_constructor:RatkiniaProtocol.Disconnect)
+}
+inline PROTOBUF_NDEBUG_INLINE Disconnect::Impl_::Impl_(
+    ::google::protobuf::internal::InternalVisibility visibility, ::google::protobuf::Arena* arena,
+    const Impl_& from, const ::RatkiniaProtocol::Disconnect& from_msg)
+      : detail_(arena, from.detail_),
+        _cached_size_{0} {}
+
+Disconnect::Disconnect(
+    ::google::protobuf::Arena* arena,
+    const Disconnect& from)
+    : ::google::protobuf::MessageLite(arena) {
+  Disconnect* const _this = this;
+  (void)_this;
+  _internal_metadata_.MergeFrom<std::string>(
+      from._internal_metadata_);
+  new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
+
+  // @@protoc_insertion_point(copy_constructor:RatkiniaProtocol.Disconnect)
+}
+inline PROTOBUF_NDEBUG_INLINE Disconnect::Impl_::Impl_(
+    ::google::protobuf::internal::InternalVisibility visibility,
+    ::google::protobuf::Arena* arena)
+      : detail_(arena),
+        _cached_size_{0} {}
+
+inline void Disconnect::SharedCtor(::_pb::Arena* arena) {
+  new (&_impl_) Impl_(internal_visibility(), arena);
+}
+Disconnect::~Disconnect() {
+  // @@protoc_insertion_point(destructor:RatkiniaProtocol.Disconnect)
+  _internal_metadata_.Delete<std::string>();
+  SharedDtor();
+}
+inline void Disconnect::SharedDtor() {
+  ABSL_DCHECK(GetArena() == nullptr);
+  _impl_.detail_.Destroy();
+  _impl_.~Impl_();
+}
+
+const ::google::protobuf::MessageLite::ClassData*
+Disconnect::GetClassData() const {
+  PROTOBUF_CONSTINIT static const ClassDataLite<28> _data_ =
+      {
+          {
+              &_table_.header,
+              nullptr,  // OnDemandRegisterArenaDtor
+              nullptr,  // IsInitialized
+              PROTOBUF_FIELD_OFFSET(Disconnect, _impl_._cached_size_),
+              true,
+          },
+          "RatkiniaProtocol.Disconnect",
+      };
+
+  return _data_.base();
+}
+PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
+const ::_pbi::TcParseTable<0, 1, 0, 42, 2> Disconnect::_table_ = {
+  {
+    0,  // no _has_bits_
+    0, // no _extensions_
+    1, 0,  // max_field_number, fast_idx_mask
+    offsetof(decltype(_table_), field_lookup_table),
+    4294967294,  // skipmap
+    offsetof(decltype(_table_), field_entries),
+    1,  // num_field_entries
+    0,  // num_aux_entries
+    offsetof(decltype(_table_), field_names),  // no aux_entries
+    &_Disconnect_default_instance_._instance,
+    nullptr,  // post_loop_handler
+    ::_pbi::TcParser::GenericFallbackLite,  // fallback
+    #ifdef PROTOBUF_PREFETCH_PARSE_TABLE
+    ::_pbi::TcParser::GetTable<::RatkiniaProtocol::Disconnect>(),  // to_prefetch
+    #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
+  }, {{
+    // string detail = 1;
+    {::_pbi::TcParser::FastUS1,
+     {10, 63, 0, PROTOBUF_FIELD_OFFSET(Disconnect, _impl_.detail_)}},
+  }}, {{
+    65535, 65535
+  }}, {{
+    // string detail = 1;
+    {PROTOBUF_FIELD_OFFSET(Disconnect, _impl_.detail_), 0, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kUtf8String | ::_fl::kRepAString)},
+  }},
+  // no aux_entries
+  {{
+    "\33\6\0\0\0\0\0\0"
+    "RatkiniaProtocol.Disconnect"
+    "detail"
+  }},
+};
+
+PROTOBUF_NOINLINE void Disconnect::Clear() {
+// @@protoc_insertion_point(message_clear_start:RatkiniaProtocol.Disconnect)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.detail_.ClearToEmpty();
+  _internal_metadata_.Clear<std::string>();
+}
+
+::uint8_t* Disconnect::_InternalSerialize(
+    ::uint8_t* target,
+    ::google::protobuf::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:RatkiniaProtocol.Disconnect)
+  ::uint32_t cached_has_bits = 0;
+  (void)cached_has_bits;
+
+  // string detail = 1;
+  if (!this->_internal_detail().empty()) {
+    const std::string& _s = this->_internal_detail();
+    ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+        _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "RatkiniaProtocol.Disconnect.detail");
+    target = stream->WriteStringMaybeAliased(1, _s, target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = stream->WriteRaw(
+        _internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString).data(),
+        static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString).size()), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:RatkiniaProtocol.Disconnect)
+  return target;
+}
+
+::size_t Disconnect::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:RatkiniaProtocol.Disconnect)
+  ::size_t total_size = 0;
+
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // string detail = 1;
+  if (!this->_internal_detail().empty()) {
+    total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
+                                    this->_internal_detail());
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    total_size += _internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString).size();
+  }
+  _impl_._cached_size_.Set(::_pbi::ToCachedSize(total_size));
+  return total_size;
+}
+
+void Disconnect::CheckTypeAndMergeFrom(
+    const ::google::protobuf::MessageLite& from) {
+  MergeFrom(*::_pbi::DownCast<const Disconnect*>(
+      &from));
+}
+
+void Disconnect::MergeFrom(const Disconnect& from) {
+  Disconnect* const _this = this;
+  // @@protoc_insertion_point(class_specific_merge_from_start:RatkiniaProtocol.Disconnect)
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (!from._internal_detail().empty()) {
+    _this->_internal_set_detail(from._internal_detail());
+  }
+  _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+}
+
+void Disconnect::CopyFrom(const Disconnect& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:RatkiniaProtocol.Disconnect)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+
+void Disconnect::InternalSwap(Disconnect* PROTOBUF_RESTRICT other) {
+  using std::swap;
+  auto* arena = GetArena();
+  ABSL_DCHECK_EQ(arena, other->GetArena());
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.detail_, &other->_impl_.detail_, arena);
+}
+
 // ===================================================================
 
 class LoginResponse::_Internal {
@@ -630,7 +885,7 @@ inline PROTOBUF_NDEBUG_INLINE CreateCharacterResponse::Impl_::Impl_(
 
 inline void CreateCharacterResponse::SharedCtor(::_pb::Arena* arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
-  _impl_.successful_ = {};
+  _impl_.result_ = {};
 }
 CreateCharacterResponse::~CreateCharacterResponse() {
   // @@protoc_insertion_point(destructor:RatkiniaProtocol.CreateCharacterResponse)
@@ -677,14 +932,14 @@ const ::_pbi::TcParseTable<0, 1, 0, 0, 2> CreateCharacterResponse::_table_ = {
     ::_pbi::TcParser::GetTable<::RatkiniaProtocol::CreateCharacterResponse>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    // .RatkiniaProtocol.CreateCharacterResponse.CreateCharacterResult successful = 1;
+    // .RatkiniaProtocol.CreateCharacterResponse.CreateCharacterResult result = 1;
     {::_pbi::TcParser::FastV32S1,
-     {8, 63, 0, PROTOBUF_FIELD_OFFSET(CreateCharacterResponse, _impl_.successful_)}},
+     {8, 63, 0, PROTOBUF_FIELD_OFFSET(CreateCharacterResponse, _impl_.result_)}},
   }}, {{
     65535, 65535
   }}, {{
-    // .RatkiniaProtocol.CreateCharacterResponse.CreateCharacterResult successful = 1;
-    {PROTOBUF_FIELD_OFFSET(CreateCharacterResponse, _impl_.successful_), 0, 0,
+    // .RatkiniaProtocol.CreateCharacterResponse.CreateCharacterResult result = 1;
+    {PROTOBUF_FIELD_OFFSET(CreateCharacterResponse, _impl_.result_), 0, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kOpenEnum)},
   }},
   // no aux_entries
@@ -699,7 +954,7 @@ PROTOBUF_NOINLINE void CreateCharacterResponse::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  _impl_.successful_ = 0;
+  _impl_.result_ = 0;
   _internal_metadata_.Clear<std::string>();
 }
 
@@ -710,11 +965,11 @@ PROTOBUF_NOINLINE void CreateCharacterResponse::Clear() {
   ::uint32_t cached_has_bits = 0;
   (void)cached_has_bits;
 
-  // .RatkiniaProtocol.CreateCharacterResponse.CreateCharacterResult successful = 1;
-  if (this->_internal_successful() != 0) {
+  // .RatkiniaProtocol.CreateCharacterResponse.CreateCharacterResult result = 1;
+  if (this->_internal_result() != 0) {
     target = stream->EnsureSpace(target);
     target = ::_pbi::WireFormatLite::WriteEnumToArray(
-        1, this->_internal_successful(), target);
+        1, this->_internal_result(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -734,10 +989,10 @@ PROTOBUF_NOINLINE void CreateCharacterResponse::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // .RatkiniaProtocol.CreateCharacterResponse.CreateCharacterResult successful = 1;
-  if (this->_internal_successful() != 0) {
+  // .RatkiniaProtocol.CreateCharacterResponse.CreateCharacterResult result = 1;
+  if (this->_internal_result() != 0) {
     total_size += 1 +
-                  ::_pbi::WireFormatLite::EnumSize(this->_internal_successful());
+                  ::_pbi::WireFormatLite::EnumSize(this->_internal_result());
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -760,8 +1015,8 @@ void CreateCharacterResponse::MergeFrom(const CreateCharacterResponse& from) {
   ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (from._internal_successful() != 0) {
-    _this->_impl_.successful_ = from._impl_.successful_;
+  if (from._internal_result() != 0) {
+    _this->_impl_.result_ = from._impl_.result_;
   }
   _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
 }
@@ -777,7 +1032,416 @@ void CreateCharacterResponse::CopyFrom(const CreateCharacterResponse& from) {
 void CreateCharacterResponse::InternalSwap(CreateCharacterResponse* PROTOBUF_RESTRICT other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  swap(_impl_.successful_, other->_impl_.successful_);
+  swap(_impl_.result_, other->_impl_.result_);
+}
+
+// ===================================================================
+
+class SendMyCharacters_CharacterLoadData::_Internal {
+ public:
+};
+
+SendMyCharacters_CharacterLoadData::SendMyCharacters_CharacterLoadData(::google::protobuf::Arena* arena)
+    : ::google::protobuf::MessageLite(arena) {
+  SharedCtor(arena);
+  // @@protoc_insertion_point(arena_constructor:RatkiniaProtocol.SendMyCharacters.CharacterLoadData)
+}
+inline PROTOBUF_NDEBUG_INLINE SendMyCharacters_CharacterLoadData::Impl_::Impl_(
+    ::google::protobuf::internal::InternalVisibility visibility, ::google::protobuf::Arena* arena,
+    const Impl_& from, const ::RatkiniaProtocol::SendMyCharacters_CharacterLoadData& from_msg)
+      : name_(arena, from.name_),
+        _cached_size_{0} {}
+
+SendMyCharacters_CharacterLoadData::SendMyCharacters_CharacterLoadData(
+    ::google::protobuf::Arena* arena,
+    const SendMyCharacters_CharacterLoadData& from)
+    : ::google::protobuf::MessageLite(arena) {
+  SendMyCharacters_CharacterLoadData* const _this = this;
+  (void)_this;
+  _internal_metadata_.MergeFrom<std::string>(
+      from._internal_metadata_);
+  new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
+  _impl_.id_ = from._impl_.id_;
+
+  // @@protoc_insertion_point(copy_constructor:RatkiniaProtocol.SendMyCharacters.CharacterLoadData)
+}
+inline PROTOBUF_NDEBUG_INLINE SendMyCharacters_CharacterLoadData::Impl_::Impl_(
+    ::google::protobuf::internal::InternalVisibility visibility,
+    ::google::protobuf::Arena* arena)
+      : name_(arena),
+        _cached_size_{0} {}
+
+inline void SendMyCharacters_CharacterLoadData::SharedCtor(::_pb::Arena* arena) {
+  new (&_impl_) Impl_(internal_visibility(), arena);
+  _impl_.id_ = {};
+}
+SendMyCharacters_CharacterLoadData::~SendMyCharacters_CharacterLoadData() {
+  // @@protoc_insertion_point(destructor:RatkiniaProtocol.SendMyCharacters.CharacterLoadData)
+  _internal_metadata_.Delete<std::string>();
+  SharedDtor();
+}
+inline void SendMyCharacters_CharacterLoadData::SharedDtor() {
+  ABSL_DCHECK(GetArena() == nullptr);
+  _impl_.name_.Destroy();
+  _impl_.~Impl_();
+}
+
+const ::google::protobuf::MessageLite::ClassData*
+SendMyCharacters_CharacterLoadData::GetClassData() const {
+  PROTOBUF_CONSTINIT static const ClassDataLite<52> _data_ =
+      {
+          {
+              &_table_.header,
+              nullptr,  // OnDemandRegisterArenaDtor
+              nullptr,  // IsInitialized
+              PROTOBUF_FIELD_OFFSET(SendMyCharacters_CharacterLoadData, _impl_._cached_size_),
+              true,
+          },
+          "RatkiniaProtocol.SendMyCharacters.CharacterLoadData",
+      };
+
+  return _data_.base();
+}
+PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
+const ::_pbi::TcParseTable<1, 2, 0, 64, 2> SendMyCharacters_CharacterLoadData::_table_ = {
+  {
+    0,  // no _has_bits_
+    0, // no _extensions_
+    2, 8,  // max_field_number, fast_idx_mask
+    offsetof(decltype(_table_), field_lookup_table),
+    4294967292,  // skipmap
+    offsetof(decltype(_table_), field_entries),
+    2,  // num_field_entries
+    0,  // num_aux_entries
+    offsetof(decltype(_table_), field_names),  // no aux_entries
+    &_SendMyCharacters_CharacterLoadData_default_instance_._instance,
+    nullptr,  // post_loop_handler
+    ::_pbi::TcParser::GenericFallbackLite,  // fallback
+    #ifdef PROTOBUF_PREFETCH_PARSE_TABLE
+    ::_pbi::TcParser::GetTable<::RatkiniaProtocol::SendMyCharacters_CharacterLoadData>(),  // to_prefetch
+    #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
+  }, {{
+    // string name = 2;
+    {::_pbi::TcParser::FastUS1,
+     {18, 63, 0, PROTOBUF_FIELD_OFFSET(SendMyCharacters_CharacterLoadData, _impl_.name_)}},
+    // uint32 id = 1;
+    {::_pbi::TcParser::FastV32S1,
+     {8, 63, 0, PROTOBUF_FIELD_OFFSET(SendMyCharacters_CharacterLoadData, _impl_.id_)}},
+  }}, {{
+    65535, 65535
+  }}, {{
+    // uint32 id = 1;
+    {PROTOBUF_FIELD_OFFSET(SendMyCharacters_CharacterLoadData, _impl_.id_), 0, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kUInt32)},
+    // string name = 2;
+    {PROTOBUF_FIELD_OFFSET(SendMyCharacters_CharacterLoadData, _impl_.name_), 0, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kUtf8String | ::_fl::kRepAString)},
+  }},
+  // no aux_entries
+  {{
+    "\63\0\4\0\0\0\0\0"
+    "RatkiniaProtocol.SendMyCharacters.CharacterLoadData"
+    "name"
+  }},
+};
+
+PROTOBUF_NOINLINE void SendMyCharacters_CharacterLoadData::Clear() {
+// @@protoc_insertion_point(message_clear_start:RatkiniaProtocol.SendMyCharacters.CharacterLoadData)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.name_.ClearToEmpty();
+  _impl_.id_ = 0u;
+  _internal_metadata_.Clear<std::string>();
+}
+
+::uint8_t* SendMyCharacters_CharacterLoadData::_InternalSerialize(
+    ::uint8_t* target,
+    ::google::protobuf::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:RatkiniaProtocol.SendMyCharacters.CharacterLoadData)
+  ::uint32_t cached_has_bits = 0;
+  (void)cached_has_bits;
+
+  // uint32 id = 1;
+  if (this->_internal_id() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(
+        1, this->_internal_id(), target);
+  }
+
+  // string name = 2;
+  if (!this->_internal_name().empty()) {
+    const std::string& _s = this->_internal_name();
+    ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+        _s.data(), static_cast<int>(_s.length()), ::google::protobuf::internal::WireFormatLite::SERIALIZE, "RatkiniaProtocol.SendMyCharacters.CharacterLoadData.name");
+    target = stream->WriteStringMaybeAliased(2, _s, target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = stream->WriteRaw(
+        _internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString).data(),
+        static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString).size()), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:RatkiniaProtocol.SendMyCharacters.CharacterLoadData)
+  return target;
+}
+
+::size_t SendMyCharacters_CharacterLoadData::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:RatkiniaProtocol.SendMyCharacters.CharacterLoadData)
+  ::size_t total_size = 0;
+
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  ::_pbi::Prefetch5LinesFrom7Lines(reinterpret_cast<const void*>(this));
+  // string name = 2;
+  if (!this->_internal_name().empty()) {
+    total_size += 1 + ::google::protobuf::internal::WireFormatLite::StringSize(
+                                    this->_internal_name());
+  }
+
+  // uint32 id = 1;
+  if (this->_internal_id() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(
+        this->_internal_id());
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    total_size += _internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString).size();
+  }
+  _impl_._cached_size_.Set(::_pbi::ToCachedSize(total_size));
+  return total_size;
+}
+
+void SendMyCharacters_CharacterLoadData::CheckTypeAndMergeFrom(
+    const ::google::protobuf::MessageLite& from) {
+  MergeFrom(*::_pbi::DownCast<const SendMyCharacters_CharacterLoadData*>(
+      &from));
+}
+
+void SendMyCharacters_CharacterLoadData::MergeFrom(const SendMyCharacters_CharacterLoadData& from) {
+  SendMyCharacters_CharacterLoadData* const _this = this;
+  // @@protoc_insertion_point(class_specific_merge_from_start:RatkiniaProtocol.SendMyCharacters.CharacterLoadData)
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (!from._internal_name().empty()) {
+    _this->_internal_set_name(from._internal_name());
+  }
+  if (from._internal_id() != 0) {
+    _this->_impl_.id_ = from._impl_.id_;
+  }
+  _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+}
+
+void SendMyCharacters_CharacterLoadData::CopyFrom(const SendMyCharacters_CharacterLoadData& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:RatkiniaProtocol.SendMyCharacters.CharacterLoadData)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+
+void SendMyCharacters_CharacterLoadData::InternalSwap(SendMyCharacters_CharacterLoadData* PROTOBUF_RESTRICT other) {
+  using std::swap;
+  auto* arena = GetArena();
+  ABSL_DCHECK_EQ(arena, other->GetArena());
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.name_, &other->_impl_.name_, arena);
+        swap(_impl_.id_, other->_impl_.id_);
+}
+
+// ===================================================================
+
+class SendMyCharacters::_Internal {
+ public:
+};
+
+SendMyCharacters::SendMyCharacters(::google::protobuf::Arena* arena)
+    : ::google::protobuf::MessageLite(arena) {
+  SharedCtor(arena);
+  // @@protoc_insertion_point(arena_constructor:RatkiniaProtocol.SendMyCharacters)
+}
+inline PROTOBUF_NDEBUG_INLINE SendMyCharacters::Impl_::Impl_(
+    ::google::protobuf::internal::InternalVisibility visibility, ::google::protobuf::Arena* arena,
+    const Impl_& from, const ::RatkiniaProtocol::SendMyCharacters& from_msg)
+      : character_load_datas_{visibility, arena, from.character_load_datas_},
+        _cached_size_{0} {}
+
+SendMyCharacters::SendMyCharacters(
+    ::google::protobuf::Arena* arena,
+    const SendMyCharacters& from)
+    : ::google::protobuf::MessageLite(arena) {
+  SendMyCharacters* const _this = this;
+  (void)_this;
+  _internal_metadata_.MergeFrom<std::string>(
+      from._internal_metadata_);
+  new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
+
+  // @@protoc_insertion_point(copy_constructor:RatkiniaProtocol.SendMyCharacters)
+}
+inline PROTOBUF_NDEBUG_INLINE SendMyCharacters::Impl_::Impl_(
+    ::google::protobuf::internal::InternalVisibility visibility,
+    ::google::protobuf::Arena* arena)
+      : character_load_datas_{visibility, arena},
+        _cached_size_{0} {}
+
+inline void SendMyCharacters::SharedCtor(::_pb::Arena* arena) {
+  new (&_impl_) Impl_(internal_visibility(), arena);
+}
+SendMyCharacters::~SendMyCharacters() {
+  // @@protoc_insertion_point(destructor:RatkiniaProtocol.SendMyCharacters)
+  _internal_metadata_.Delete<std::string>();
+  SharedDtor();
+}
+inline void SendMyCharacters::SharedDtor() {
+  ABSL_DCHECK(GetArena() == nullptr);
+  _impl_.~Impl_();
+}
+
+const ::google::protobuf::MessageLite::ClassData*
+SendMyCharacters::GetClassData() const {
+  PROTOBUF_CONSTINIT static const ClassDataLite<34> _data_ =
+      {
+          {
+              &_table_.header,
+              nullptr,  // OnDemandRegisterArenaDtor
+              nullptr,  // IsInitialized
+              PROTOBUF_FIELD_OFFSET(SendMyCharacters, _impl_._cached_size_),
+              true,
+          },
+          "RatkiniaProtocol.SendMyCharacters",
+      };
+
+  return _data_.base();
+}
+PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
+const ::_pbi::TcParseTable<0, 1, 1, 0, 2> SendMyCharacters::_table_ = {
+  {
+    0,  // no _has_bits_
+    0, // no _extensions_
+    1, 0,  // max_field_number, fast_idx_mask
+    offsetof(decltype(_table_), field_lookup_table),
+    4294967294,  // skipmap
+    offsetof(decltype(_table_), field_entries),
+    1,  // num_field_entries
+    1,  // num_aux_entries
+    offsetof(decltype(_table_), aux_entries),
+    &_SendMyCharacters_default_instance_._instance,
+    nullptr,  // post_loop_handler
+    ::_pbi::TcParser::GenericFallbackLite,  // fallback
+    #ifdef PROTOBUF_PREFETCH_PARSE_TABLE
+    ::_pbi::TcParser::GetTable<::RatkiniaProtocol::SendMyCharacters>(),  // to_prefetch
+    #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
+  }, {{
+    // repeated .RatkiniaProtocol.SendMyCharacters.CharacterLoadData character_load_datas = 1;
+    {::_pbi::TcParser::FastMtR1,
+     {10, 63, 0, PROTOBUF_FIELD_OFFSET(SendMyCharacters, _impl_.character_load_datas_)}},
+  }}, {{
+    65535, 65535
+  }}, {{
+    // repeated .RatkiniaProtocol.SendMyCharacters.CharacterLoadData character_load_datas = 1;
+    {PROTOBUF_FIELD_OFFSET(SendMyCharacters, _impl_.character_load_datas_), 0, 0,
+    (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
+  }}, {{
+    {::_pbi::TcParser::GetTable<::RatkiniaProtocol::SendMyCharacters_CharacterLoadData>()},
+  }}, {{
+  }},
+};
+
+PROTOBUF_NOINLINE void SendMyCharacters::Clear() {
+// @@protoc_insertion_point(message_clear_start:RatkiniaProtocol.SendMyCharacters)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.character_load_datas_.Clear();
+  _internal_metadata_.Clear<std::string>();
+}
+
+::uint8_t* SendMyCharacters::_InternalSerialize(
+    ::uint8_t* target,
+    ::google::protobuf::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:RatkiniaProtocol.SendMyCharacters)
+  ::uint32_t cached_has_bits = 0;
+  (void)cached_has_bits;
+
+  // repeated .RatkiniaProtocol.SendMyCharacters.CharacterLoadData character_load_datas = 1;
+  for (unsigned i = 0, n = static_cast<unsigned>(
+                           this->_internal_character_load_datas_size());
+       i < n; i++) {
+    const auto& repfield = this->_internal_character_load_datas().Get(i);
+    target =
+        ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
+            1, repfield, repfield.GetCachedSize(),
+            target, stream);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = stream->WriteRaw(
+        _internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString).data(),
+        static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString).size()), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:RatkiniaProtocol.SendMyCharacters)
+  return target;
+}
+
+::size_t SendMyCharacters::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:RatkiniaProtocol.SendMyCharacters)
+  ::size_t total_size = 0;
+
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  ::_pbi::Prefetch5LinesFrom7Lines(reinterpret_cast<const void*>(this));
+  // repeated .RatkiniaProtocol.SendMyCharacters.CharacterLoadData character_load_datas = 1;
+  total_size += 1UL * this->_internal_character_load_datas_size();
+  for (const auto& msg : this->_internal_character_load_datas()) {
+    total_size += ::google::protobuf::internal::WireFormatLite::MessageSize(msg);
+  }
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    total_size += _internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString).size();
+  }
+  _impl_._cached_size_.Set(::_pbi::ToCachedSize(total_size));
+  return total_size;
+}
+
+void SendMyCharacters::CheckTypeAndMergeFrom(
+    const ::google::protobuf::MessageLite& from) {
+  MergeFrom(*::_pbi::DownCast<const SendMyCharacters*>(
+      &from));
+}
+
+void SendMyCharacters::MergeFrom(const SendMyCharacters& from) {
+  SendMyCharacters* const _this = this;
+  // @@protoc_insertion_point(class_specific_merge_from_start:RatkiniaProtocol.SendMyCharacters)
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  _this->_internal_mutable_character_load_datas()->MergeFrom(
+      from._internal_character_load_datas());
+  _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+}
+
+void SendMyCharacters::CopyFrom(const SendMyCharacters& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:RatkiniaProtocol.SendMyCharacters)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+
+void SendMyCharacters::InternalSwap(SendMyCharacters* PROTOBUF_RESTRICT other) {
+  using std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  _impl_.character_load_datas_.InternalSwap(&other->_impl_.character_load_datas_);
 }
 
 // @@protoc_insertion_point(namespace_scope)

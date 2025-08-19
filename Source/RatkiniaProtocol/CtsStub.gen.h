@@ -1,9 +1,11 @@
-// 2025. 08. 16. 23:45. Ratkinia Protocol Generator에 의해 생성됨.
+//
+// 2025. 08. 19. 21:16. Ratkinia Protocol Generator에 의해 생성됨.
+//
 
-#ifndef CTSSTUB_GEN_H
-#define CTSSTUB_GEN_H
+#ifndef RATKINIAPROTOCOL_CTSSTUB_GEN_H
+#define RATKINIAPROTOCOL_CTSSTUB_GEN_H
 
-#include "RatkiniaProtocol.gen.h"
+#include "CtsMessageType.gen.h"
 #include "Cts.pb.h"
 
 namespace RatkiniaProtocol 
@@ -14,15 +16,17 @@ namespace RatkiniaProtocol
     public:
         virtual ~CtsStub() = default;
 
-        virtual void OnUnknownMessageType(uint32_t context, CtsMessageType messageType) = 0;
+        virtual void OnUnknownMessageType(const uint32_t context, CtsMessageType messageType) = 0;
 
-        virtual void OnParseMessageFailed(uint32_t context, CtsMessageType messageType) = 0;
+        virtual void OnParseMessageFailed(const uint32_t context, CtsMessageType messageType) = 0;
 
-        virtual void OnLoginRequest(uint32_t context, const std::string& account, const std::string& password) = 0;
+        virtual void OnLoginRequest(const uint32_t context, const std::string& account, const std::string& password) = 0;
 
-        virtual void OnRegisterRequest(uint32_t context, const std::string& account, const std::string& password) = 0;
+        virtual void OnRegisterRequest(const uint32_t context, const std::string& account, const std::string& password) = 0;
 
-        virtual void OnCreateCharacter(uint32_t context, const std::string& name) = 0;
+        virtual void OnCreateCharacter(const uint32_t context, const std::string& name) = 0;
+
+        virtual void OnLoadMyCharacters(const uint32_t context) = 0;
 
         void HandleCts(const uint32_t context, const uint16_t messageType, const uint16_t bodySize, const char* const body)
         {
@@ -59,6 +63,17 @@ namespace RatkiniaProtocol
                         return;
                     }
                     static_cast<TDerivedStub*>(this)->OnCreateCharacter(context, CreateCharacterMessage.name());
+                    return;
+                }
+                case static_cast<int32_t>(CtsMessageType::LoadMyCharacters):
+                {
+                    LoadMyCharacters LoadMyCharactersMessage;
+                    if (!LoadMyCharactersMessage.ParseFromArray(body, bodySize))
+                    {
+                        static_cast<TDerivedStub*>(this)->OnParseMessageFailed(context, static_cast<CtsMessageType>(messageType));
+                        return;
+                    }
+                    static_cast<TDerivedStub*>(this)->OnLoadMyCharacters(context);
                     return;
                 }
                 default:

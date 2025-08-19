@@ -106,3 +106,25 @@ void Stub::OnCreateCharacter(const uint32_t context, const std::string& name)
 
     environment_.Proxy.CreateCharacterResponse(context, CreateCharacterResponse_CreateCharacterResult_Success);
 }
+
+void Stub::OnLoadMyCharacters(const uint32_t context)
+{
+    const auto g_auth = environment_.GlobalObjectManager.Get<G_Auth>();
+    const auto id = g_auth->TryGetIdOfContext(context);
+    if (!id)
+    {
+        environment_.Proxy.Disconnect(context, "로그인 세션이 유효하지 않습니다.");
+        return;
+    }
+
+    nontransaction loadMyCharacters{ environment_.DbConnection };
+    const auto result = loadMyCharacters.exec(Prepped_LoadMyCharacters, *id);
+    environment_.Proxy.SendMyCharacters(
+        context,
+        result,
+        [](const row& row, SendMyCharacters_CharacterLoadData& data)
+        {
+            data.set_id(row[0].as<uint32_t>());
+            data.set_name(row[2].as<std::string>());
+        });
+}

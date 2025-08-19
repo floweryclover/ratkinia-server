@@ -49,6 +49,9 @@ namespace RatkiniaProtocol {
 class CreateCharacter;
 struct CreateCharacterDefaultTypeInternal;
 extern CreateCharacterDefaultTypeInternal _CreateCharacter_default_instance_;
+class LoadMyCharacters;
+struct LoadMyCharactersDefaultTypeInternal;
+extern LoadMyCharactersDefaultTypeInternal _LoadMyCharacters_default_instance_;
 class LoginRequest;
 struct LoginRequestDefaultTypeInternal;
 extern LoginRequestDefaultTypeInternal _LoginRequest_default_instance_;
@@ -416,6 +419,146 @@ class LoginRequest final : public ::google::protobuf::MessageLite
                           const LoginRequest& from_msg);
     ::google::protobuf::internal::ArenaStringPtr account_;
     ::google::protobuf::internal::ArenaStringPtr password_;
+    mutable ::google::protobuf::internal::CachedSize _cached_size_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_Cts_2eproto;
+};
+// -------------------------------------------------------------------
+
+class LoadMyCharacters final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:RatkiniaProtocol.LoadMyCharacters) */ {
+ public:
+  inline LoadMyCharacters() : LoadMyCharacters(nullptr) {}
+  ~LoadMyCharacters() override;
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR LoadMyCharacters(
+      ::google::protobuf::internal::ConstantInitialized);
+
+  inline LoadMyCharacters(const LoadMyCharacters& from) : LoadMyCharacters(nullptr, from) {}
+  inline LoadMyCharacters(LoadMyCharacters&& from) noexcept
+      : LoadMyCharacters(nullptr, std::move(from)) {}
+  inline LoadMyCharacters& operator=(const LoadMyCharacters& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline LoadMyCharacters& operator=(LoadMyCharacters&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetArena() == from.GetArena()
+#ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetArena() != nullptr
+#endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline std::string* mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<std::string>();
+  }
+
+  static const LoadMyCharacters& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const LoadMyCharacters* internal_default_instance() {
+    return reinterpret_cast<const LoadMyCharacters*>(
+        &_LoadMyCharacters_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 3;
+  friend void swap(LoadMyCharacters& a, LoadMyCharacters& b) { a.Swap(&b); }
+  inline void Swap(LoadMyCharacters* other) {
+    if (other == this) return;
+#ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() != nullptr && GetArena() == other->GetArena()) {
+#else   // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() == other->GetArena()) {
+#endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(LoadMyCharacters* other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  LoadMyCharacters* New(::google::protobuf::Arena* arena = nullptr) const final {
+    return ::google::protobuf::MessageLite::DefaultConstruct<LoadMyCharacters>(arena);
+  }
+  void CheckTypeAndMergeFrom(
+      const ::google::protobuf::MessageLite& from) final;
+  void CopyFrom(const LoadMyCharacters& from);
+  void MergeFrom(const LoadMyCharacters& from);
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() final;
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* _InternalSerialize(
+      ::uint8_t* target,
+      ::google::protobuf::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* arena);
+  void SharedDtor();
+  void InternalSwap(LoadMyCharacters* other);
+ private:
+  friend class ::google::protobuf::internal::AnyMetadata;
+  static ::absl::string_view FullMessageName() { return "RatkiniaProtocol.LoadMyCharacters"; }
+
+ protected:
+  explicit LoadMyCharacters(::google::protobuf::Arena* arena);
+  LoadMyCharacters(::google::protobuf::Arena* arena, const LoadMyCharacters& from);
+  LoadMyCharacters(::google::protobuf::Arena* arena, LoadMyCharacters&& from) noexcept
+      : LoadMyCharacters(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::MessageLite::ClassData* GetClassData() const final;
+
+ public:
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  // @@protoc_insertion_point(class_scope:RatkiniaProtocol.LoadMyCharacters)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<
+      0, 0, 0,
+      0, 2>
+      _table_;
+
+  static constexpr const void* _raw_default_instance_ =
+      &_LoadMyCharacters_default_instance_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(
+        ::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                          ::google::protobuf::Arena* arena);
+    inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                          ::google::protobuf::Arena* arena, const Impl_& from,
+                          const LoadMyCharacters& from_msg);
     mutable ::google::protobuf::internal::CachedSize _cached_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -856,6 +999,10 @@ inline void CreateCharacter::set_allocated_name(std::string* value) {
   #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   // @@protoc_insertion_point(field_set_allocated:RatkiniaProtocol.CreateCharacter.name)
 }
+
+// -------------------------------------------------------------------
+
+// LoadMyCharacters
 
 #ifdef __GNUC__
 #pragma GCC diagnostic pop

@@ -50,12 +50,21 @@ namespace RatkiniaProtocol {
 class CreateCharacterResponse;
 struct CreateCharacterResponseDefaultTypeInternal;
 extern CreateCharacterResponseDefaultTypeInternal _CreateCharacterResponse_default_instance_;
+class Disconnect;
+struct DisconnectDefaultTypeInternal;
+extern DisconnectDefaultTypeInternal _Disconnect_default_instance_;
 class LoginResponse;
 struct LoginResponseDefaultTypeInternal;
 extern LoginResponseDefaultTypeInternal _LoginResponse_default_instance_;
 class RegisterResponse;
 struct RegisterResponseDefaultTypeInternal;
 extern RegisterResponseDefaultTypeInternal _RegisterResponse_default_instance_;
+class SendMyCharacters;
+struct SendMyCharactersDefaultTypeInternal;
+extern SendMyCharactersDefaultTypeInternal _SendMyCharacters_default_instance_;
+class SendMyCharacters_CharacterLoadData;
+struct SendMyCharacters_CharacterLoadDataDefaultTypeInternal;
+extern SendMyCharacters_CharacterLoadDataDefaultTypeInternal _SendMyCharacters_CharacterLoadData_default_instance_;
 }  // namespace RatkiniaProtocol
 namespace google {
 namespace protobuf {
@@ -119,6 +128,178 @@ bool CreateCharacterResponse_CreateCharacterResult_Parse(absl::string_view name,
 
 // -------------------------------------------------------------------
 
+class SendMyCharacters_CharacterLoadData final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:RatkiniaProtocol.SendMyCharacters.CharacterLoadData) */ {
+ public:
+  inline SendMyCharacters_CharacterLoadData() : SendMyCharacters_CharacterLoadData(nullptr) {}
+  ~SendMyCharacters_CharacterLoadData() override;
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR SendMyCharacters_CharacterLoadData(
+      ::google::protobuf::internal::ConstantInitialized);
+
+  inline SendMyCharacters_CharacterLoadData(const SendMyCharacters_CharacterLoadData& from) : SendMyCharacters_CharacterLoadData(nullptr, from) {}
+  inline SendMyCharacters_CharacterLoadData(SendMyCharacters_CharacterLoadData&& from) noexcept
+      : SendMyCharacters_CharacterLoadData(nullptr, std::move(from)) {}
+  inline SendMyCharacters_CharacterLoadData& operator=(const SendMyCharacters_CharacterLoadData& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline SendMyCharacters_CharacterLoadData& operator=(SendMyCharacters_CharacterLoadData&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetArena() == from.GetArena()
+#ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetArena() != nullptr
+#endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline std::string* mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<std::string>();
+  }
+
+  static const SendMyCharacters_CharacterLoadData& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const SendMyCharacters_CharacterLoadData* internal_default_instance() {
+    return reinterpret_cast<const SendMyCharacters_CharacterLoadData*>(
+        &_SendMyCharacters_CharacterLoadData_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 4;
+  friend void swap(SendMyCharacters_CharacterLoadData& a, SendMyCharacters_CharacterLoadData& b) { a.Swap(&b); }
+  inline void Swap(SendMyCharacters_CharacterLoadData* other) {
+    if (other == this) return;
+#ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() != nullptr && GetArena() == other->GetArena()) {
+#else   // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() == other->GetArena()) {
+#endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(SendMyCharacters_CharacterLoadData* other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  SendMyCharacters_CharacterLoadData* New(::google::protobuf::Arena* arena = nullptr) const final {
+    return ::google::protobuf::MessageLite::DefaultConstruct<SendMyCharacters_CharacterLoadData>(arena);
+  }
+  void CheckTypeAndMergeFrom(
+      const ::google::protobuf::MessageLite& from) final;
+  void CopyFrom(const SendMyCharacters_CharacterLoadData& from);
+  void MergeFrom(const SendMyCharacters_CharacterLoadData& from);
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() final;
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* _InternalSerialize(
+      ::uint8_t* target,
+      ::google::protobuf::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* arena);
+  void SharedDtor();
+  void InternalSwap(SendMyCharacters_CharacterLoadData* other);
+ private:
+  friend class ::google::protobuf::internal::AnyMetadata;
+  static ::absl::string_view FullMessageName() { return "RatkiniaProtocol.SendMyCharacters.CharacterLoadData"; }
+
+ protected:
+  explicit SendMyCharacters_CharacterLoadData(::google::protobuf::Arena* arena);
+  SendMyCharacters_CharacterLoadData(::google::protobuf::Arena* arena, const SendMyCharacters_CharacterLoadData& from);
+  SendMyCharacters_CharacterLoadData(::google::protobuf::Arena* arena, SendMyCharacters_CharacterLoadData&& from) noexcept
+      : SendMyCharacters_CharacterLoadData(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::MessageLite::ClassData* GetClassData() const final;
+
+ public:
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kNameFieldNumber = 2,
+    kIdFieldNumber = 1,
+  };
+  // string name = 2;
+  void clear_name() ;
+  const std::string& name() const;
+  template <typename Arg_ = const std::string&, typename... Args_>
+  void set_name(Arg_&& arg, Args_... args);
+  std::string* mutable_name();
+  PROTOBUF_NODISCARD std::string* release_name();
+  void set_allocated_name(std::string* value);
+
+  private:
+  const std::string& _internal_name() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_name(
+      const std::string& value);
+  std::string* _internal_mutable_name();
+
+  public:
+  // uint32 id = 1;
+  void clear_id() ;
+  ::uint32_t id() const;
+  void set_id(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_id() const;
+  void _internal_set_id(::uint32_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:RatkiniaProtocol.SendMyCharacters.CharacterLoadData)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<
+      1, 2, 0,
+      64, 2>
+      _table_;
+
+  static constexpr const void* _raw_default_instance_ =
+      &_SendMyCharacters_CharacterLoadData_default_instance_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(
+        ::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                          ::google::protobuf::Arena* arena);
+    inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                          ::google::protobuf::Arena* arena, const Impl_& from,
+                          const SendMyCharacters_CharacterLoadData& from_msg);
+    ::google::protobuf::internal::ArenaStringPtr name_;
+    ::uint32_t id_;
+    mutable ::google::protobuf::internal::CachedSize _cached_size_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_Stc_2eproto;
+};
+// -------------------------------------------------------------------
+
 class RegisterResponse final : public ::google::protobuf::MessageLite
 /* @@protoc_insertion_point(class_definition:RatkiniaProtocol.RegisterResponse) */ {
  public:
@@ -165,7 +346,7 @@ class RegisterResponse final : public ::google::protobuf::MessageLite
     return reinterpret_cast<const RegisterResponse*>(
         &_RegisterResponse_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 1;
+  static constexpr int kIndexInFileMessages = 2;
   friend void swap(RegisterResponse& a, RegisterResponse& b) { a.Swap(&b); }
   inline void Swap(RegisterResponse* other) {
     if (other == this) return;
@@ -337,7 +518,7 @@ class LoginResponse final : public ::google::protobuf::MessageLite
     return reinterpret_cast<const LoginResponse*>(
         &_LoginResponse_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 0;
+  static constexpr int kIndexInFileMessages = 1;
   friend void swap(LoginResponse& a, LoginResponse& b) { a.Swap(&b); }
   inline void Swap(LoginResponse* other) {
     if (other == this) return;
@@ -463,6 +644,166 @@ class LoginResponse final : public ::google::protobuf::MessageLite
 };
 // -------------------------------------------------------------------
 
+class Disconnect final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:RatkiniaProtocol.Disconnect) */ {
+ public:
+  inline Disconnect() : Disconnect(nullptr) {}
+  ~Disconnect() override;
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR Disconnect(
+      ::google::protobuf::internal::ConstantInitialized);
+
+  inline Disconnect(const Disconnect& from) : Disconnect(nullptr, from) {}
+  inline Disconnect(Disconnect&& from) noexcept
+      : Disconnect(nullptr, std::move(from)) {}
+  inline Disconnect& operator=(const Disconnect& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline Disconnect& operator=(Disconnect&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetArena() == from.GetArena()
+#ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetArena() != nullptr
+#endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline std::string* mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<std::string>();
+  }
+
+  static const Disconnect& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const Disconnect* internal_default_instance() {
+    return reinterpret_cast<const Disconnect*>(
+        &_Disconnect_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 0;
+  friend void swap(Disconnect& a, Disconnect& b) { a.Swap(&b); }
+  inline void Swap(Disconnect* other) {
+    if (other == this) return;
+#ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() != nullptr && GetArena() == other->GetArena()) {
+#else   // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() == other->GetArena()) {
+#endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(Disconnect* other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  Disconnect* New(::google::protobuf::Arena* arena = nullptr) const final {
+    return ::google::protobuf::MessageLite::DefaultConstruct<Disconnect>(arena);
+  }
+  void CheckTypeAndMergeFrom(
+      const ::google::protobuf::MessageLite& from) final;
+  void CopyFrom(const Disconnect& from);
+  void MergeFrom(const Disconnect& from);
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() final;
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* _InternalSerialize(
+      ::uint8_t* target,
+      ::google::protobuf::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* arena);
+  void SharedDtor();
+  void InternalSwap(Disconnect* other);
+ private:
+  friend class ::google::protobuf::internal::AnyMetadata;
+  static ::absl::string_view FullMessageName() { return "RatkiniaProtocol.Disconnect"; }
+
+ protected:
+  explicit Disconnect(::google::protobuf::Arena* arena);
+  Disconnect(::google::protobuf::Arena* arena, const Disconnect& from);
+  Disconnect(::google::protobuf::Arena* arena, Disconnect&& from) noexcept
+      : Disconnect(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::MessageLite::ClassData* GetClassData() const final;
+
+ public:
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kDetailFieldNumber = 1,
+  };
+  // string detail = 1;
+  void clear_detail() ;
+  const std::string& detail() const;
+  template <typename Arg_ = const std::string&, typename... Args_>
+  void set_detail(Arg_&& arg, Args_... args);
+  std::string* mutable_detail();
+  PROTOBUF_NODISCARD std::string* release_detail();
+  void set_allocated_detail(std::string* value);
+
+  private:
+  const std::string& _internal_detail() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_detail(
+      const std::string& value);
+  std::string* _internal_mutable_detail();
+
+  public:
+  // @@protoc_insertion_point(class_scope:RatkiniaProtocol.Disconnect)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<
+      0, 1, 0,
+      42, 2>
+      _table_;
+
+  static constexpr const void* _raw_default_instance_ =
+      &_Disconnect_default_instance_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(
+        ::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                          ::google::protobuf::Arena* arena);
+    inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                          ::google::protobuf::Arena* arena, const Impl_& from,
+                          const Disconnect& from_msg);
+    ::google::protobuf::internal::ArenaStringPtr detail_;
+    mutable ::google::protobuf::internal::CachedSize _cached_size_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_Stc_2eproto;
+};
+// -------------------------------------------------------------------
+
 class CreateCharacterResponse final : public ::google::protobuf::MessageLite
 /* @@protoc_insertion_point(class_definition:RatkiniaProtocol.CreateCharacterResponse) */ {
  public:
@@ -509,7 +850,7 @@ class CreateCharacterResponse final : public ::google::protobuf::MessageLite
     return reinterpret_cast<const CreateCharacterResponse*>(
         &_CreateCharacterResponse_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 2;
+  static constexpr int kIndexInFileMessages = 3;
   friend void swap(CreateCharacterResponse& a, CreateCharacterResponse& b) { a.Swap(&b); }
   inline void Swap(CreateCharacterResponse* other) {
     if (other == this) return;
@@ -588,16 +929,16 @@ class CreateCharacterResponse final : public ::google::protobuf::MessageLite
 
   // accessors -------------------------------------------------------
   enum : int {
-    kSuccessfulFieldNumber = 1,
+    kResultFieldNumber = 1,
   };
-  // .RatkiniaProtocol.CreateCharacterResponse.CreateCharacterResult successful = 1;
-  void clear_successful() ;
-  ::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult successful() const;
-  void set_successful(::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult value);
+  // .RatkiniaProtocol.CreateCharacterResponse.CreateCharacterResult result = 1;
+  void clear_result() ;
+  ::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult result() const;
+  void set_result(::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult value);
 
   private:
-  ::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult _internal_successful() const;
-  void _internal_set_successful(::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult value);
+  ::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult _internal_result() const;
+  void _internal_set_result(::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult value);
 
   public:
   // @@protoc_insertion_point(class_scope:RatkiniaProtocol.CreateCharacterResponse)
@@ -626,7 +967,169 @@ class CreateCharacterResponse final : public ::google::protobuf::MessageLite
     inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
                           ::google::protobuf::Arena* arena, const Impl_& from,
                           const CreateCharacterResponse& from_msg);
-    int successful_;
+    int result_;
+    mutable ::google::protobuf::internal::CachedSize _cached_size_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_Stc_2eproto;
+};
+// -------------------------------------------------------------------
+
+class SendMyCharacters final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:RatkiniaProtocol.SendMyCharacters) */ {
+ public:
+  inline SendMyCharacters() : SendMyCharacters(nullptr) {}
+  ~SendMyCharacters() override;
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR SendMyCharacters(
+      ::google::protobuf::internal::ConstantInitialized);
+
+  inline SendMyCharacters(const SendMyCharacters& from) : SendMyCharacters(nullptr, from) {}
+  inline SendMyCharacters(SendMyCharacters&& from) noexcept
+      : SendMyCharacters(nullptr, std::move(from)) {}
+  inline SendMyCharacters& operator=(const SendMyCharacters& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline SendMyCharacters& operator=(SendMyCharacters&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetArena() == from.GetArena()
+#ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetArena() != nullptr
+#endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline std::string* mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<std::string>();
+  }
+
+  static const SendMyCharacters& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const SendMyCharacters* internal_default_instance() {
+    return reinterpret_cast<const SendMyCharacters*>(
+        &_SendMyCharacters_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 5;
+  friend void swap(SendMyCharacters& a, SendMyCharacters& b) { a.Swap(&b); }
+  inline void Swap(SendMyCharacters* other) {
+    if (other == this) return;
+#ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() != nullptr && GetArena() == other->GetArena()) {
+#else   // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() == other->GetArena()) {
+#endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(SendMyCharacters* other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  SendMyCharacters* New(::google::protobuf::Arena* arena = nullptr) const final {
+    return ::google::protobuf::MessageLite::DefaultConstruct<SendMyCharacters>(arena);
+  }
+  void CheckTypeAndMergeFrom(
+      const ::google::protobuf::MessageLite& from) final;
+  void CopyFrom(const SendMyCharacters& from);
+  void MergeFrom(const SendMyCharacters& from);
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() final;
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* _InternalSerialize(
+      ::uint8_t* target,
+      ::google::protobuf::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* arena);
+  void SharedDtor();
+  void InternalSwap(SendMyCharacters* other);
+ private:
+  friend class ::google::protobuf::internal::AnyMetadata;
+  static ::absl::string_view FullMessageName() { return "RatkiniaProtocol.SendMyCharacters"; }
+
+ protected:
+  explicit SendMyCharacters(::google::protobuf::Arena* arena);
+  SendMyCharacters(::google::protobuf::Arena* arena, const SendMyCharacters& from);
+  SendMyCharacters(::google::protobuf::Arena* arena, SendMyCharacters&& from) noexcept
+      : SendMyCharacters(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::MessageLite::ClassData* GetClassData() const final;
+
+ public:
+  // nested types ----------------------------------------------------
+  using CharacterLoadData = SendMyCharacters_CharacterLoadData;
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kCharacterLoadDatasFieldNumber = 1,
+  };
+  // repeated .RatkiniaProtocol.SendMyCharacters.CharacterLoadData character_load_datas = 1;
+  int character_load_datas_size() const;
+  private:
+  int _internal_character_load_datas_size() const;
+
+  public:
+  void clear_character_load_datas() ;
+  ::RatkiniaProtocol::SendMyCharacters_CharacterLoadData* mutable_character_load_datas(int index);
+  ::google::protobuf::RepeatedPtrField<::RatkiniaProtocol::SendMyCharacters_CharacterLoadData>* mutable_character_load_datas();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::RatkiniaProtocol::SendMyCharacters_CharacterLoadData>& _internal_character_load_datas() const;
+  ::google::protobuf::RepeatedPtrField<::RatkiniaProtocol::SendMyCharacters_CharacterLoadData>* _internal_mutable_character_load_datas();
+  public:
+  const ::RatkiniaProtocol::SendMyCharacters_CharacterLoadData& character_load_datas(int index) const;
+  ::RatkiniaProtocol::SendMyCharacters_CharacterLoadData* add_character_load_datas();
+  const ::google::protobuf::RepeatedPtrField<::RatkiniaProtocol::SendMyCharacters_CharacterLoadData>& character_load_datas() const;
+  // @@protoc_insertion_point(class_scope:RatkiniaProtocol.SendMyCharacters)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<
+      0, 1, 1,
+      0, 2>
+      _table_;
+
+  static constexpr const void* _raw_default_instance_ =
+      &_SendMyCharacters_default_instance_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(
+        ::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                          ::google::protobuf::Arena* arena);
+    inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                          ::google::protobuf::Arena* arena, const Impl_& from,
+                          const SendMyCharacters& from_msg);
+    ::google::protobuf::RepeatedPtrField< ::RatkiniaProtocol::SendMyCharacters_CharacterLoadData > character_load_datas_;
     mutable ::google::protobuf::internal::CachedSize _cached_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -646,6 +1149,60 @@ class CreateCharacterResponse final : public ::google::protobuf::MessageLite
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
+// Disconnect
+
+// string detail = 1;
+inline void Disconnect::clear_detail() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.detail_.ClearToEmpty();
+}
+inline const std::string& Disconnect::detail() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:RatkiniaProtocol.Disconnect.detail)
+  return _internal_detail();
+}
+template <typename Arg_, typename... Args_>
+inline PROTOBUF_ALWAYS_INLINE void Disconnect::set_detail(Arg_&& arg,
+                                                     Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.detail_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:RatkiniaProtocol.Disconnect.detail)
+}
+inline std::string* Disconnect::mutable_detail() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  std::string* _s = _internal_mutable_detail();
+  // @@protoc_insertion_point(field_mutable:RatkiniaProtocol.Disconnect.detail)
+  return _s;
+}
+inline const std::string& Disconnect::_internal_detail() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.detail_.Get();
+}
+inline void Disconnect::_internal_set_detail(const std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.detail_.Set(value, GetArena());
+}
+inline std::string* Disconnect::_internal_mutable_detail() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.detail_.Mutable( GetArena());
+}
+inline std::string* Disconnect::release_detail() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:RatkiniaProtocol.Disconnect.detail)
+  return _impl_.detail_.Release();
+}
+inline void Disconnect::set_allocated_detail(std::string* value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.detail_.SetAllocated(value, GetArena());
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        if (_impl_.detail_.IsDefault()) {
+          _impl_.detail_.Set("", GetArena());
+        }
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:RatkiniaProtocol.Disconnect.detail)
+}
+
 // -------------------------------------------------------------------
 
 // LoginResponse
@@ -752,26 +1309,155 @@ inline void RegisterResponse::set_allocated_failed_reason(std::string* value) {
 
 // CreateCharacterResponse
 
-// .RatkiniaProtocol.CreateCharacterResponse.CreateCharacterResult successful = 1;
-inline void CreateCharacterResponse::clear_successful() {
+// .RatkiniaProtocol.CreateCharacterResponse.CreateCharacterResult result = 1;
+inline void CreateCharacterResponse::clear_result() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.successful_ = 0;
+  _impl_.result_ = 0;
 }
-inline ::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult CreateCharacterResponse::successful() const {
-  // @@protoc_insertion_point(field_get:RatkiniaProtocol.CreateCharacterResponse.successful)
-  return _internal_successful();
+inline ::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult CreateCharacterResponse::result() const {
+  // @@protoc_insertion_point(field_get:RatkiniaProtocol.CreateCharacterResponse.result)
+  return _internal_result();
 }
-inline void CreateCharacterResponse::set_successful(::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult value) {
-  _internal_set_successful(value);
-  // @@protoc_insertion_point(field_set:RatkiniaProtocol.CreateCharacterResponse.successful)
+inline void CreateCharacterResponse::set_result(::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult value) {
+  _internal_set_result(value);
+  // @@protoc_insertion_point(field_set:RatkiniaProtocol.CreateCharacterResponse.result)
 }
-inline ::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult CreateCharacterResponse::_internal_successful() const {
+inline ::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult CreateCharacterResponse::_internal_result() const {
   ::google::protobuf::internal::TSanRead(&_impl_);
-  return static_cast<::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult>(_impl_.successful_);
+  return static_cast<::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult>(_impl_.result_);
 }
-inline void CreateCharacterResponse::_internal_set_successful(::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult value) {
+inline void CreateCharacterResponse::_internal_set_result(::RatkiniaProtocol::CreateCharacterResponse_CreateCharacterResult value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.successful_ = value;
+  _impl_.result_ = value;
+}
+
+// -------------------------------------------------------------------
+
+// SendMyCharacters_CharacterLoadData
+
+// uint32 id = 1;
+inline void SendMyCharacters_CharacterLoadData::clear_id() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.id_ = 0u;
+}
+inline ::uint32_t SendMyCharacters_CharacterLoadData::id() const {
+  // @@protoc_insertion_point(field_get:RatkiniaProtocol.SendMyCharacters.CharacterLoadData.id)
+  return _internal_id();
+}
+inline void SendMyCharacters_CharacterLoadData::set_id(::uint32_t value) {
+  _internal_set_id(value);
+  // @@protoc_insertion_point(field_set:RatkiniaProtocol.SendMyCharacters.CharacterLoadData.id)
+}
+inline ::uint32_t SendMyCharacters_CharacterLoadData::_internal_id() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.id_;
+}
+inline void SendMyCharacters_CharacterLoadData::_internal_set_id(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.id_ = value;
+}
+
+// string name = 2;
+inline void SendMyCharacters_CharacterLoadData::clear_name() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.name_.ClearToEmpty();
+}
+inline const std::string& SendMyCharacters_CharacterLoadData::name() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:RatkiniaProtocol.SendMyCharacters.CharacterLoadData.name)
+  return _internal_name();
+}
+template <typename Arg_, typename... Args_>
+inline PROTOBUF_ALWAYS_INLINE void SendMyCharacters_CharacterLoadData::set_name(Arg_&& arg,
+                                                     Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.name_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:RatkiniaProtocol.SendMyCharacters.CharacterLoadData.name)
+}
+inline std::string* SendMyCharacters_CharacterLoadData::mutable_name() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  std::string* _s = _internal_mutable_name();
+  // @@protoc_insertion_point(field_mutable:RatkiniaProtocol.SendMyCharacters.CharacterLoadData.name)
+  return _s;
+}
+inline const std::string& SendMyCharacters_CharacterLoadData::_internal_name() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.name_.Get();
+}
+inline void SendMyCharacters_CharacterLoadData::_internal_set_name(const std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.name_.Set(value, GetArena());
+}
+inline std::string* SendMyCharacters_CharacterLoadData::_internal_mutable_name() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.name_.Mutable( GetArena());
+}
+inline std::string* SendMyCharacters_CharacterLoadData::release_name() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:RatkiniaProtocol.SendMyCharacters.CharacterLoadData.name)
+  return _impl_.name_.Release();
+}
+inline void SendMyCharacters_CharacterLoadData::set_allocated_name(std::string* value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.name_.SetAllocated(value, GetArena());
+  #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        if (_impl_.name_.IsDefault()) {
+          _impl_.name_.Set("", GetArena());
+        }
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  // @@protoc_insertion_point(field_set_allocated:RatkiniaProtocol.SendMyCharacters.CharacterLoadData.name)
+}
+
+// -------------------------------------------------------------------
+
+// SendMyCharacters
+
+// repeated .RatkiniaProtocol.SendMyCharacters.CharacterLoadData character_load_datas = 1;
+inline int SendMyCharacters::_internal_character_load_datas_size() const {
+  return _internal_character_load_datas().size();
+}
+inline int SendMyCharacters::character_load_datas_size() const {
+  return _internal_character_load_datas_size();
+}
+inline void SendMyCharacters::clear_character_load_datas() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.character_load_datas_.Clear();
+}
+inline ::RatkiniaProtocol::SendMyCharacters_CharacterLoadData* SendMyCharacters::mutable_character_load_datas(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:RatkiniaProtocol.SendMyCharacters.character_load_datas)
+  return _internal_mutable_character_load_datas()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::RatkiniaProtocol::SendMyCharacters_CharacterLoadData>* SendMyCharacters::mutable_character_load_datas()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable_list:RatkiniaProtocol.SendMyCharacters.character_load_datas)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_character_load_datas();
+}
+inline const ::RatkiniaProtocol::SendMyCharacters_CharacterLoadData& SendMyCharacters::character_load_datas(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:RatkiniaProtocol.SendMyCharacters.character_load_datas)
+  return _internal_character_load_datas().Get(index);
+}
+inline ::RatkiniaProtocol::SendMyCharacters_CharacterLoadData* SendMyCharacters::add_character_load_datas() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::RatkiniaProtocol::SendMyCharacters_CharacterLoadData* _add = _internal_mutable_character_load_datas()->Add();
+  // @@protoc_insertion_point(field_add:RatkiniaProtocol.SendMyCharacters.character_load_datas)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::RatkiniaProtocol::SendMyCharacters_CharacterLoadData>& SendMyCharacters::character_load_datas() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:RatkiniaProtocol.SendMyCharacters.character_load_datas)
+  return _internal_character_load_datas();
+}
+inline const ::google::protobuf::RepeatedPtrField<::RatkiniaProtocol::SendMyCharacters_CharacterLoadData>&
+SendMyCharacters::_internal_character_load_datas() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.character_load_datas_;
+}
+inline ::google::protobuf::RepeatedPtrField<::RatkiniaProtocol::SendMyCharacters_CharacterLoadData>*
+SendMyCharacters::_internal_mutable_character_load_datas() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.character_load_datas_;
 }
 
 #ifdef __GNUC__

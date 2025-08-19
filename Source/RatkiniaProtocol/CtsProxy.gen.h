@@ -1,10 +1,12 @@
-// 2025. 08. 16. 23:45. Ratkinia Protocol Generator에 의해 생성됨.
+//
+// 2025. 08. 19. 21:16. Ratkinia Protocol Generator에 의해 생성됨.
+//
 
-#ifndef CTSPROXY_GEN_H
-#define CTSPROXY_GEN_H
+#ifndef RATKINIAPROTOCOL_CTSPROXY_GEN_H
+#define RATKINIAPROTOCOL_CTSPROXY_GEN_H
 
 #include "Cts.pb.h"
-#include "RatkiniaProtocol.gen.h"
+#include "CtsMessageType.gen.h"
 
 namespace RatkiniaProtocol 
 {
@@ -12,7 +14,7 @@ namespace RatkiniaProtocol
     class CtsProxy
     {
     public:
-        void LoginRequest(uint32_t context, const std::string& account, const std::string& password)
+        void LoginRequest(const uint32_t context, std::string account, std::string password)
         {
             class LoginRequest LoginRequestMessage;
             LoginRequestMessage.set_account(account);
@@ -20,7 +22,7 @@ namespace RatkiniaProtocol
             static_cast<TDerivedProxy*>(this)->WriteMessage(context, CtsMessageType::LoginRequest, LoginRequestMessage);
         }
 
-        void RegisterRequest(uint32_t context, const std::string& account, const std::string& password)
+        void RegisterRequest(const uint32_t context, std::string account, std::string password)
         {
             class RegisterRequest RegisterRequestMessage;
             RegisterRequestMessage.set_account(account);
@@ -28,11 +30,17 @@ namespace RatkiniaProtocol
             static_cast<TDerivedProxy*>(this)->WriteMessage(context, CtsMessageType::RegisterRequest, RegisterRequestMessage);
         }
 
-        void CreateCharacter(uint32_t context, const std::string& name)
+        void CreateCharacter(const uint32_t context, std::string name)
         {
             class CreateCharacter CreateCharacterMessage;
             CreateCharacterMessage.set_name(name);
             static_cast<TDerivedProxy*>(this)->WriteMessage(context, CtsMessageType::CreateCharacter, CreateCharacterMessage);
+        }
+
+        void LoadMyCharacters()
+        {
+            class LoadMyCharacters LoadMyCharactersMessage;
+            static_cast<TDerivedProxy*>(this)->WriteMessage(CtsMessageType::LoadMyCharacters, LoadMyCharactersMessage);
         }
     };
 }

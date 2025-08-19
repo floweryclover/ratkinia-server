@@ -30,6 +30,8 @@ public:
 
     void OnCreateCharacter(uint32_t context, const std::string& name) override;
 
+    void OnLoadMyCharacters(uint32_t context) override;
+
 private:
     MutableEnvironment& environment_;
 };

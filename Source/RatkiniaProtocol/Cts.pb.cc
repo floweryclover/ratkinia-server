@@ -70,6 +70,24 @@ struct LoginRequestDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 LoginRequestDefaultTypeInternal _LoginRequest_default_instance_;
 
+inline constexpr LoadMyCharacters::Impl_::Impl_(
+    ::_pbi::ConstantInitialized) noexcept
+      : _cached_size_{0} {}
+
+template <typename>
+PROTOBUF_CONSTEXPR LoadMyCharacters::LoadMyCharacters(::_pbi::ConstantInitialized)
+    : _impl_(::_pbi::ConstantInitialized()) {}
+struct LoadMyCharactersDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR LoadMyCharactersDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
+  ~LoadMyCharactersDefaultTypeInternal() {}
+  union {
+    LoadMyCharacters _instance;
+  };
+};
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 LoadMyCharactersDefaultTypeInternal _LoadMyCharacters_default_instance_;
+
 inline constexpr CreateCharacter::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
       : name_(
@@ -729,6 +747,154 @@ void CreateCharacter::InternalSwap(CreateCharacter* PROTOBUF_RESTRICT other) {
   ABSL_DCHECK_EQ(arena, other->GetArena());
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.name_, &other->_impl_.name_, arena);
+}
+
+// ===================================================================
+
+class LoadMyCharacters::_Internal {
+ public:
+};
+
+LoadMyCharacters::LoadMyCharacters(::google::protobuf::Arena* arena)
+    : ::google::protobuf::MessageLite(arena) {
+  SharedCtor(arena);
+  // @@protoc_insertion_point(arena_constructor:RatkiniaProtocol.LoadMyCharacters)
+}
+LoadMyCharacters::LoadMyCharacters(
+    ::google::protobuf::Arena* arena, const LoadMyCharacters& from)
+    : LoadMyCharacters(arena) {
+  MergeFrom(from);
+}
+inline PROTOBUF_NDEBUG_INLINE LoadMyCharacters::Impl_::Impl_(
+    ::google::protobuf::internal::InternalVisibility visibility,
+    ::google::protobuf::Arena* arena)
+      : _cached_size_{0} {}
+
+inline void LoadMyCharacters::SharedCtor(::_pb::Arena* arena) {
+  new (&_impl_) Impl_(internal_visibility(), arena);
+}
+LoadMyCharacters::~LoadMyCharacters() {
+  // @@protoc_insertion_point(destructor:RatkiniaProtocol.LoadMyCharacters)
+  _internal_metadata_.Delete<std::string>();
+  SharedDtor();
+}
+inline void LoadMyCharacters::SharedDtor() {
+  ABSL_DCHECK(GetArena() == nullptr);
+  _impl_.~Impl_();
+}
+
+const ::google::protobuf::MessageLite::ClassData*
+LoadMyCharacters::GetClassData() const {
+  PROTOBUF_CONSTINIT static const ClassDataLite<34> _data_ =
+      {
+          {
+              &_table_.header,
+              nullptr,  // OnDemandRegisterArenaDtor
+              nullptr,  // IsInitialized
+              PROTOBUF_FIELD_OFFSET(LoadMyCharacters, _impl_._cached_size_),
+              true,
+          },
+          "RatkiniaProtocol.LoadMyCharacters",
+      };
+
+  return _data_.base();
+}
+PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
+const ::_pbi::TcParseTable<0, 0, 0, 0, 2> LoadMyCharacters::_table_ = {
+  {
+    0,  // no _has_bits_
+    0, // no _extensions_
+    0, 0,  // max_field_number, fast_idx_mask
+    offsetof(decltype(_table_), field_lookup_table),
+    4294967295,  // skipmap
+    offsetof(decltype(_table_), field_names),  // no field_entries
+    0,  // num_field_entries
+    0,  // num_aux_entries
+    offsetof(decltype(_table_), field_names),  // no aux_entries
+    &_LoadMyCharacters_default_instance_._instance,
+    nullptr,  // post_loop_handler
+    ::_pbi::TcParser::GenericFallbackLite,  // fallback
+    #ifdef PROTOBUF_PREFETCH_PARSE_TABLE
+    ::_pbi::TcParser::GetTable<::RatkiniaProtocol::LoadMyCharacters>(),  // to_prefetch
+    #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
+  }, {{
+    {::_pbi::TcParser::MiniParse, {}},
+  }}, {{
+    65535, 65535
+  }},
+  // no field_entries, or aux_entries
+  {{
+  }},
+};
+
+PROTOBUF_NOINLINE void LoadMyCharacters::Clear() {
+// @@protoc_insertion_point(message_clear_start:RatkiniaProtocol.LoadMyCharacters)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _internal_metadata_.Clear<std::string>();
+}
+
+::uint8_t* LoadMyCharacters::_InternalSerialize(
+    ::uint8_t* target,
+    ::google::protobuf::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:RatkiniaProtocol.LoadMyCharacters)
+  ::uint32_t cached_has_bits = 0;
+  (void)cached_has_bits;
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = stream->WriteRaw(
+        _internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString).data(),
+        static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString).size()), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:RatkiniaProtocol.LoadMyCharacters)
+  return target;
+}
+
+::size_t LoadMyCharacters::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:RatkiniaProtocol.LoadMyCharacters)
+  ::size_t total_size = 0;
+
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    total_size += _internal_metadata_.unknown_fields<std::string>(::google::protobuf::internal::GetEmptyString).size();
+  }
+  _impl_._cached_size_.Set(::_pbi::ToCachedSize(total_size));
+  return total_size;
+}
+
+void LoadMyCharacters::CheckTypeAndMergeFrom(
+    const ::google::protobuf::MessageLite& from) {
+  MergeFrom(*::_pbi::DownCast<const LoadMyCharacters*>(
+      &from));
+}
+
+void LoadMyCharacters::MergeFrom(const LoadMyCharacters& from) {
+  LoadMyCharacters* const _this = this;
+  // @@protoc_insertion_point(class_specific_merge_from_start:RatkiniaProtocol.LoadMyCharacters)
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+}
+
+void LoadMyCharacters::CopyFrom(const LoadMyCharacters& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:RatkiniaProtocol.LoadMyCharacters)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+
+void LoadMyCharacters::InternalSwap(LoadMyCharacters* PROTOBUF_RESTRICT other) {
+  using std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
 }
 
 // @@protoc_insertion_point(namespace_scope)

@@ -37,6 +37,7 @@ MainServer::MainServer(std::string listenAddress,
     dbConnection_.prepare(Prepped_CreateAccount, "INSERT INTO player.accounts (account, password) VALUES ($1, $2)");
     dbConnection_.prepare(Prepped_FindPlayerCharacterByName, "SELECT * FROM player.characters WHERE name = $1");
     dbConnection_.prepare(Prepped_CreatePlayerCharacter, "INSERT INTO player.characters (player_id, name) VALUES ($1, $2)");
+    dbConnection_.prepare(Prepped_LoadMyCharacters, "SELECT * FROM player.characters WHERE player_id = $1");
 }
 
 void MainServer::Run()
