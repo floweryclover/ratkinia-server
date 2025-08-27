@@ -12,17 +12,23 @@ namespace pqxx
     class connection;
 }
 
+class EntityManager;
+class ComponentManager;
 class GlobalObjectManager;
 class EventManager;
 
 struct ImmutableEnvironment final
 {
+    const EntityManager& EntityManager;
+    const ComponentManager& ComponentManager;
     const GlobalObjectManager& GlobalObjectManager;
     const EventManager& EventManager;
 };
 
 struct MutableEnvironment final
 {
+    EntityManager& EntityManager;
+    ComponentManager& ComponentManager;
     GlobalObjectManager& GlobalObjectManager;
     EventManager& EventManager;
     pqxx::connection& DbConnection;
@@ -32,6 +38,8 @@ struct MutableEnvironment final
     {
         return
         {
+            EntityManager,
+            ComponentManager,
             GlobalObjectManager,
             EventManager
         };

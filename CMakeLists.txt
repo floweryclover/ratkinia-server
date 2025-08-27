@@ -24,8 +24,15 @@ target_include_directories(${PROJECT_NAME}
         "Source"
         "Source/System"
         "Source/GlobalObject"
-        "Source/RatkiniaProtocol"
-        "Source/Event")
+        "Source/Component"
+        "Source/Event"
+        "Source/Registrar"
+        "Source/Util")
+
+target_include_directories(${PROJECT_NAME}
+        PRIVATE
+        ../ratkinia-protocol/Out/Common
+        ../ratkinia-protocol/Out/Server)
 
 target_include_directories(${PROJECT_NAME} PRIVATE Thirdparty/libbcrypt/include)
 

@@ -3,43 +3,37 @@
 //
 
 #include "G_PlayerCharacters.h"
+#include <format>
 
-G_PlayerCharacters::CharacterLinkResult G_PlayerCharacters::TryLink(const uint32_t context, const uint32_t character)
+void G_PlayerCharacters::AddOwnership(const uint32_t playerId, const uint32_t characterId, const Entity entity)
 {
-    if (contextCharacterMap_.contains(context))
-    {
-        return CharacterLinkResult::DuplicateContext;
-    }
-    if (characterContextMap_.contains(character))
-    {
-        return CharacterLinkResult::CharacterAlreadyActive;
-    }
+    const bool integrityError = characterEntityMap_.Get(characterId) ||
+                                entityPlayerMap_.Get(entity.GetId()) ||
+                                entityCharacterMap_.Get(entity.GetId());
+    CRASH_COND_MSG(integrityError,
+                      std::format("PlayerId: {}, CharacterId: {}, Entity: {}", playerId, characterId, entity.GetId()));
 
-    contextCharacterMap_.emplace(context, character);
-    characterContextMap_.emplace(character, context);
-    return CharacterLinkResult::Success;
+    characterEntityMap_.EmplaceAt(characterId, entity);
+    entityPlayerMap_.EmplaceAt(entity.GetId(), entity.GetVersion(), playerId);
+    entityCharacterMap_.EmplaceAt(entity.GetId(), entity.GetVersion(), characterId);
 }
 
-void G_PlayerCharacters::UnlinkByContext(const uint32_t context)
+Entity G_PlayerCharacters::GetEntityOf(const uint32_t playerId, const uint32_t characterId)
 {
-    const auto contextCharacter = contextCharacterMap_.find(context);
-    if (contextCharacter == contextCharacterMap_.end())
+    const auto entity = characterEntityMap_.Get(characterId);
+    if (!entity)
     {
-        return;
+        return Entity::NullEntity();
     }
 
-    characterContextMap_.erase(contextCharacter->second);
-    contextCharacterMap_.erase(contextCharacter);
-}
+    const auto entityCharacter = entityCharacterMap_.Get(entity->GetId());
+    const auto entityPlayer = entityPlayerMap_.Get(entity->GetId());
+    const bool integrityError = !entityCharacter || !entityPlayer;
+    CRASH_COND_MSG(integrityError, std::format("PlayerId: {}, CharacterId: {}, Entity: {}", playerId, characterId, entity->GetId()));
 
-void G_PlayerCharacters::UnlinkByCharacter(const uint32_t character)
-{
-    const auto characterContext = characterContextMap_.find(character);
-    if (characterContext == characterContextMap_.end())
+    if (entityPlayer->second != playerId)
     {
-        return;
+        return Entity::NullEntity();
     }
-
-    contextCharacterMap_.erase(characterContext->second);
-    characterContextMap_.erase(characterContext);
+    return *entity;
 }

@@ -6,6 +6,8 @@
 #define EVENT_SESSIONERASED_H
 
 #include "Context.h"
+#include "RuntimeOrder.h"
+#include "ErrorMacros.h"
 
 struct Event_SessionErased final
 {
@@ -13,8 +15,17 @@ struct Event_SessionErased final
 
     static uint32_t GetRuntimeOrder()
     {
-        return 0;
+        return RuntimeOrder;
     }
+
+    static void SetRuntimeOrder(const uint32_t runtimeOrder)
+    {
+        CRASH_COND(RuntimeOrder != UnregisteredRuntimeOrder);
+        RuntimeOrder = runtimeOrder;
+    }
+
+private:
+    inline static uint32_t RuntimeOrder = UnregisteredRuntimeOrder;
 };
 
 #endif //EVENT_SESSIONERASED_H

@@ -13,22 +13,29 @@
 class GlobalObjectManager final
 {
 public:
-    template<typename TGlobalObject, typename ...Args>
-    void Register(Args&&... args)
+    explicit GlobalObjectManager(std::vector<std::unique_ptr<GlobalObject>> globalObjects)
+        : globalObjects_{ std::move(globalObjects) }
     {
-        const uint32_t runtimeOrder = globalObjects_.size();
-        TGlobalObject::SetRuntimeOrder(runtimeOrder);
-        globalObjects_.emplace_back(std::make_unique<TGlobalObject>(std::forward<Args>(args)...));
     }
 
+    ~GlobalObjectManager() = default;
+
+    GlobalObjectManager(const GlobalObjectManager&) = delete;
+
+    GlobalObjectManager(GlobalObjectManager&&) = delete;
+
+    GlobalObjectManager& operator=(const GlobalObjectManager&) = delete;
+
+    GlobalObjectManager& operator=(GlobalObjectManager&&) = delete;
+
     template<typename TGlobalObject>
-    TGlobalObject* Get()
+    TGlobalObject& Get()
     {
         const uint32_t runtimeOrder = TGlobalObject::GetRuntimeOrder();
         const bool isNotRegistered = runtimeOrder == (std::numeric_limits<uint32_t>::max)();
-        CRASH_COND(isNotRegistered);
+        CRASH_COND_MSG(isNotRegistered, TGlobalObject::GetGlobalObjectName());
 
-        return static_cast<TGlobalObject*>(globalObjects_[runtimeOrder].get());
+        return *static_cast<TGlobalObject*>(globalObjects_[runtimeOrder].get());
     }
 
 private:

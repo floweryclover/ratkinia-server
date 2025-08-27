@@ -25,9 +25,18 @@
     } else                                                                                                                      \
         ((void)0)
 
+#define ERR_FAIL_COND_MSG(cond, msg)                                                                                                    \
+    if (!!(cond))                                                                                                         \
+    {                                                                                                                           \
+        ERR_PRINT_VARARGS("Condition \"" , _MKSTR(cond), "\" is true. Message: ", msg, ".");                        \
+        return;                                                                                                                 \
+    }   \
+    else                                                                                                                      \
+        ((void)0)
+
 #define ERR_FAIL_COND_V(cond, retval)                                                                                                   \
     if (!!(cond)) {                                                                                                                \
-        ERR_PRINT_VARARGS("Condition \"", _MKSTR(cond), "\" is true. Returning: ", _MKSTR(retval);          \
+        ERR_PRINT_VARARGS("Condition \"", _MKSTR(cond), "\" is true. Returning: ", _MKSTR(retval), ".");          \
         return retval;                                                                                                                   \
     } else                                                                                                                               \
         ((void)0)
@@ -45,6 +54,15 @@
         ERR_PRINT_VARARGS("Parameter \"", _MKSTR(param), "\" is null. Returning: ", _MKSTR(retval));               \
         return retval;                                                                                                                  \
     } else                                                                                                                               \
+        ((void)0)
+
+#define ERR_FAIL_NULL_V_MSG(param, retval, msg)                                                                                 \
+    if (!!(!(param)))                                                                                                           \
+    {                                                                                                                           \
+        ERR_PRINT_VARARGS("Parameter \"", _MKSTR(param), "\" is null. Returning: ", _MKSTR(retval), ", Message: ", msg, ".");   \
+        return retval;                                                                                                          \
+    }                                                                                                                           \
+    else                                                                                                                        \
         ((void)0)
 
 #define ERR_CONTINUE_COND(cond)                                                                                                    \

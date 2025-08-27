@@ -5,12 +5,22 @@
 #include "Stub.h"
 #include "AuthJob.h"
 #include "Database.h"
-#include "G_Auth.h"
 #include "Environment.h"
 #include "Proxy.h"
+#include "ComponentManager.h"
+#include "EntityManager.h"
 #include "GlobalObjectManager.h"
+
+#include "C_NameTag.h"
+
+#include "G_Auth.h"
+#include "G_Possession.h"
+
 #include <pqxx/pqxx>
 #include <regex>
+
+#include "G_PlayerCharacters.h"
+
 
 using namespace pqxx;
 using namespace Database;
@@ -52,7 +62,7 @@ void Stub::OnLoginRequest(const uint32_t context,
         memcpy(savedPassword.data(), EmptyHashedPassword.c_str(), EmptyHashedPassword.size() + 1);
     }
 
-    environment_.GlobalObjectManager.Get<G_Auth>()->CreateAuthJob<LoginJob>(context, pkeyId, password, savedPassword);
+    environment_.GlobalObjectManager.Get<G_Auth>().CreateAuthJob<LoginJob>(context, pkeyId, password, savedPassword);
 }
 
 void Stub::OnRegisterRequest(const uint32_t context,
@@ -72,7 +82,7 @@ void Stub::OnRegisterRequest(const uint32_t context,
         return;
     }
 
-    environment_.GlobalObjectManager.Get<G_Auth>()->CreateAuthJob<RegisterJob>(context, id, password);
+    environment_.GlobalObjectManager.Get<G_Auth>().CreateAuthJob<RegisterJob>(context, id, password);
 }
 
 void Stub::OnCreateCharacter(const uint32_t context, const std::string& name)
@@ -92,8 +102,8 @@ void Stub::OnCreateCharacter(const uint32_t context, const std::string& name)
         return;
     }
 
-    const auto id = environment_.GlobalObjectManager.Get<G_Auth>()->TryGetIdOfContext(context);
-    if (!id)
+    const auto playerId = environment_.GlobalObjectManager.Get<G_Auth>().TryGetIdOfContext(context);
+    if (!playerId)
     {
         environment_.Proxy.CreateCharacterResponse(context,
                                                    CreateCharacterResponse_CreateCharacterResult_UnknownError);
@@ -101,19 +111,30 @@ void Stub::OnCreateCharacter(const uint32_t context, const std::string& name)
     }
 
     work insertPlayerCharacter{ environment_.DbConnection };
-    insertPlayerCharacter.exec(Prepped_CreatePlayerCharacter, params{ *id, name });
+    const auto results = insertPlayerCharacter.exec(Prepped_CreatePlayerCharacter, params{ *playerId, name });
     insertPlayerCharacter.commit();
 
+    if (results.empty())
+    {
+        environment_.Proxy.CreateCharacterResponse(context,
+                                                   CreateCharacterResponse_CreateCharacterResult_UnknownError);
+        return;
+    }
+
+    const uint32_t characterId = results[0][0].as<uint32_t>();
+    const auto entity = environment_.EntityManager.Create();
+
     environment_.Proxy.CreateCharacterResponse(context, CreateCharacterResponse_CreateCharacterResult_Success);
+    environment_.GlobalObjectManager.Get<G_PlayerCharacters>().AddOwnership(*playerId, characterId, entity);
 }
 
 void Stub::OnLoadMyCharacters(const uint32_t context)
 {
-    const auto g_auth = environment_.GlobalObjectManager.Get<G_Auth>();
-    const auto id = g_auth->TryGetIdOfContext(context);
+    auto& g_auth = environment_.GlobalObjectManager.Get<G_Auth>();
+    const auto id = g_auth.TryGetIdOfContext(context);
     if (!id)
     {
-        environment_.Proxy.Disconnect(context, "로그인 세션이 유효하지 않습니다.");
+        environment_.Proxy.Notificate(context, Notificate_Type_Fatal, "로그인 세션이 유효하지 않습니다.");
         return;
     }
 
@@ -122,9 +143,61 @@ void Stub::OnLoadMyCharacters(const uint32_t context)
     environment_.Proxy.SendMyCharacters(
         context,
         result,
-        [](const row& row, SendMyCharacters_CharacterLoadData& data)
+        [](const row& row, SendMyCharacters_Data& data)
         {
             data.set_id(row[0].as<uint32_t>());
             data.set_name(row[2].as<std::string>());
+        });
+}
+
+void Stub::OnSelectCharacter(const uint32_t context, const uint32_t id)
+{
+    auto& g_auth = environment_.GlobalObjectManager.Get<G_Auth>();
+    const auto playerId = g_auth.TryGetIdOfContext(context);
+    if (!playerId)
+    {
+        environment_.Proxy.Notificate(context, Notificate_Type_Fatal, "로그인이 필요합니다.");
+        return;
+    }
+
+    auto& g_playerCharacters = environment_.GlobalObjectManager.Get<G_PlayerCharacters>();
+    const auto entity = g_playerCharacters.GetEntityOf(*playerId, id);
+    if (!entity)
+    {
+        environment_.Proxy.Notificate(context, Notificate_Type_Fatal, "요청한 플레이어와 캐릭터에 해당하는 엔티티를 찾을 수 없습니다.");
+        return;
+    }
+
+    auto& g_possession = environment_.GlobalObjectManager.Get<G_Possession>();
+    if (const auto possessionResult = g_possession.TryPossess(context, entity);
+        possessionResult != G_Possession::PosessionResult::Success)
+    {
+        environment_.Proxy.Notificate(context, Notificate_Type_Fatal, "이미 접속 중입니다.");
+        return;
+    }
+
+    for (const auto entityaa : environment_.EntityManager)
+    {
+    std::cout << "I have " << entityaa.GetId() << std::endl;
+    }
+    std::cout << "I haveddd"  << std::endl;
+    environment_.Proxy.OpenWorld(context);
+    environment_.Proxy.SpawnEntity(
+        context,
+        environment_.EntityManager,
+        [entity](const Entity worldEntity, SpawnEntity_Data& data)
+        {
+            std::cout << "Sent " << worldEntity.GetId() << std::endl;
+            data.set_type(worldEntity == entity ? SpawnEntity_Type_MyCharacter : SpawnEntity_Type_Normal);
+            data.set_entity_id(entity.GetId());
+        });
+
+    environment_.Proxy.AttachComponentTo(
+        context,
+        environment_.ComponentManager.Components<C_NameTag>(),
+        [](const std::pair<uint32_t, C_NameTag>& pair, AttachComponentTo_Data& data)
+        {
+            data.set_target_entity(pair.first);
+            data.mutable_component_variant()->mutable_name_tag()->set_name(std::to_string(pair.first));
         });
 }

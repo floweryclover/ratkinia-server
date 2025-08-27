@@ -5,10 +5,8 @@
 #ifndef GLOBALOBJECTREGISTERAR_H
 #define GLOBALOBJECTREGISTERAR_H
 
-#include "MainServer.h"
+class Registrar;
 
-class MainServer;
-
-void RegisterGlobalObjects(MainServer& gameServer);
+void RegisterGlobalObjects(Registrar& registrar);
 
 #endif //GLOBALOBJECTREGISTERAR_H

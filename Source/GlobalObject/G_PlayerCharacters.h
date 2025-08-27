@@ -5,29 +5,25 @@
 #ifndef G_PLAYERCHARACTERS_H
 #define G_PLAYERCHARACTERS_H
 
+#include "Entity.h"
 #include "GlobalObject.h"
-#include <unordered_map>
+#include "MemoryPool/SparseList.h"
 
+/**
+ * 플레이어 소유의 캐릭터들의 정보를 관리하는 글로벌 오브젝트.
+ */
 struct G_PlayerCharacters final : GlobalObject
 {
     GLOBALOBJECT(G_PlayerCharacters)
 
-    enum class CharacterLinkResult : uint8_t
-    {
-        Success,
-        DuplicateContext,
-        CharacterAlreadyActive,
-    };
+    void AddOwnership(uint32_t playerId, uint32_t characterId, Entity entity);
 
-    CharacterLinkResult TryLink(uint32_t context, uint32_t character);
-
-    void UnlinkByContext(uint32_t context);
-
-    void UnlinkByCharacter(uint32_t character);
+    Entity GetEntityOf(uint32_t playerId, uint32_t characterId);
 
 private:
-    std::unordered_map<uint32_t, uint32_t> contextCharacterMap_;
-    std::unordered_map<uint32_t, uint32_t> characterContextMap_;
+    SparseList<Entity> characterEntityMap_;
+    SparseList<std::pair<uint32_t, uint32_t>> entityPlayerMap_; // [Version, PlayerId]
+    SparseList<std::pair<uint32_t, uint32_t>> entityCharacterMap_; // [Version, CharacterId]
 };
 
 #endif //G_PLAYERCHARACTERS_H

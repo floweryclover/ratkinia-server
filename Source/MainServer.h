@@ -6,7 +6,10 @@
 #define RATKINIASERVER_MAINSERVER_H
 
 #include "Environment.h"
+#include "Registrar.h"
+#include "EntityManager.h"
 #include "NetworkServer.h"
+#include "ComponentManager.h"
 #include "GlobalObjectManager.h"
 #include "EventManager.h"
 #include "Floweryclover/ParallelExecutor.h"
@@ -16,14 +19,15 @@
 #include "ErrorMacros.h"
 #include <pqxx/pqxx>
 #include <thread>
-#include <unordered_set>
+#include <queue>
 
 class NetworkServer;
 
 class MainServer final
 {
 public:
-    explicit MainServer(std::string listenAddress,
+    explicit MainServer(Registrar registrar,
+                        std::string listenAddress,
                         uint16_t listenPort,
                         std::string dbHost,
                         uint16_t acceptPoolSize,
@@ -49,23 +53,19 @@ public:
         return dbConnection_;
     }
 
-    template<typename TGlobalObject, typename... Args>
-    void RegisterGlobalObject(Args&&... args)
+    void AddCommand(std::string command)
     {
-        globalObjectManager_.Register<TGlobalObject>(std::forward<Args>(args)...);
-    }
-
-    void RegisterSystem(const System system, std::string name)
-    {
-        ERR_FAIL_COND(registeredSystems_.contains(name));
-        systems_.emplace_back(system);
-        registeredSystems_.emplace(std::move(name));
+        std::lock_guard lock{ commandsMutex_ };
+        commands_.emplace(std::move(command));
     }
 
 private:
     const std::string ListenAddress;
     const uint16_t ListenPort;
     const std::string DbHost;
+
+    std::queue<std::string> commands_;
+    std::mutex commandsMutex_;
 
     NetworkServer networkServer_;
     Floweryclover::ParallelExecutor executor_;
@@ -74,14 +74,15 @@ private:
     pqxx::connection dbConnection_;
     std::thread thread_;
 
-    GlobalObjectManager globalObjectManager_;
-    EventManager eventManager_;
-
+    EntityManager entityManager_;
+    ComponentManager componentManager_;
     std::vector<System> systems_;
-    std::unordered_set<std::string> registeredSystems_;
+    EventManager eventManager_;
+    GlobalObjectManager globalObjectManager_;
+
+    std::vector<System> initializerSystems_;
 
     MutableEnvironment environment_;
 };
-
 
 #endif //RATKINIASERVER_MAINSERVER_H

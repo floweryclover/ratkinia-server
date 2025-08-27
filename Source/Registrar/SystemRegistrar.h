@@ -5,10 +5,8 @@
 #ifndef SYSTEMREGISTRAR_H
 #define SYSTEMREGISTRAR_H
 
-#include "MainServer.h"
+class Registrar;
 
-class MainServer;
-
-void RegisterSystems(MainServer& gameServer);
+void RegisterSystems(Registrar& registrar);
 
 #endif //SYSTEMREGISTRAR_H

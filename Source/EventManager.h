@@ -5,14 +5,19 @@
 #ifndef EVENTMANAGER_H
 #define EVENTMANAGER_H
 
+#include "EventQueue.h"
+#include "ErrorMacros.h"
 #include "RuntimeOrder.h"
-#include "Event_SessionErased.h"
 #include <vector>
+#include <memory>
 
 class EventManager final
 {
 public:
-    explicit EventManager();
+    explicit EventManager(std::vector<std::unique_ptr<RawEventQueue>> eventQueues)
+        : eventQueues_{std::move(eventQueues)}
+    {
+    }
 
     ~EventManager() = default;
 
@@ -28,33 +33,31 @@ public:
     {
         for (auto& queue : eventQueues_)
         {
-            queue.clear();
+            queue->Clear();
         }
     }
 
-    template<typename TEvent, typename ...Args>
-    void Push(Args&&... args)
+    template<typename TEvent, typename... Args>
+    TEvent& Push(Args&&... args)
     {
-        CRASH_COND(TEvent::GetRuntimeOrder() == UnregisteredRuntimeOrder);
-        eventQueues_[TEvent::GetRuntimeOrder()].emplace_back(std::forward<Args>(args)...);
+        return GetEventQueue<TEvent>().emplace_back(std::forward<Args>(args)...);
     }
 
     template<typename TEvent>
-    std::vector<Event_SessionErased>& Events()
+    EventRange<TEvent> Events()
     {
-        CRASH_COND(TEvent::GetRuntimeOrder() == UnregisteredRuntimeOrder);
-        return eventQueues_[TEvent::GetRuntimeOrder()];
-    }
-
-    template<typename TEvent>
-    const std::vector<Event_SessionErased>& Events() const
-    {
-        CRASH_COND(TEvent::GetRuntimeOrder() == UnregisteredRuntimeOrder);
-        return eventQueues_[TEvent::GetRuntimeOrder()];
+        return EventRange<TEvent>{ GetEventQueue<TEvent>() };
     }
 
 private:
-    std::vector<std::vector<Event_SessionErased>> eventQueues_;
+    std::vector<std::unique_ptr<RawEventQueue>> eventQueues_;
+
+    template<typename TEvent>
+    std::vector<TEvent>& GetEventQueue()
+    {
+        CRASH_COND(TEvent::GetRuntimeOrder() == UnregisteredRuntimeOrder);
+        return static_cast<EventQueue<TEvent>&>(*eventQueues_[TEvent::GetRuntimeOrder()]).Events;
+    }
 };
 
 #endif //EVENTMANAGER_H

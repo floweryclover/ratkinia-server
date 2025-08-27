@@ -40,6 +40,11 @@ inline GlobalObject::~GlobalObject()
         {                                                                   \
             CRASH_COND(RuntimeOrder != UnregisteredRuntimeOrder);           \
             RuntimeOrder = runtimeOrder;                                    \
+        }                                                                   \
+                                                                            \
+        static const char* GetGlobalObjectName()                            \
+        {                                                                   \
+            return #TClass;                                                 \
         }
 
 #endif // GLOBALOBJECT_H

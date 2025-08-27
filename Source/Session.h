@@ -156,7 +156,7 @@ public:
     std::optional<MessagePeekResult> TryPeekMessage();
 
     template<typename TMessage>
-    bool TryPushMessage(uint16_t messageType, TMessage&& message);
+    bool TryPushMessage(uint16_t messageType, const TMessage& message);
 
 private:
     const HANDLE Iocp;
@@ -225,7 +225,7 @@ private:
 };
 
 template<typename TMessage>
-bool Session::TryPushMessage(const uint16_t messageType, TMessage&& message)
+bool Session::TryPushMessage(const uint16_t messageType, const TMessage& message)
 {
     const size_t bodySize = message.ByteSizeLong();
     const size_t size = RatkiniaProtocol::MessageHeaderSize + bodySize;
