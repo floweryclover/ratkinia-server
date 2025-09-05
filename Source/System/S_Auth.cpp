@@ -63,6 +63,7 @@ void S_Auth(const MutableEnvironment& environment)
                 environment.Proxy.RegisterResponse(registerJob.Context, false, "중복된 ID입니다.");
                 return;
             }
+            sameIdSearchWork.commit();
             work insertAccountWork{ environment.DbConnection };
             const auto insertAccountResult = insertAccountWork.exec(Prepped_CreateAccount,
                                                                     params{
