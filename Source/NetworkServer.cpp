@@ -98,14 +98,20 @@ NetworkServer::~NetworkServer()
 
 std::optional<uint32_t> NetworkServer::TryClearClosedSession()
 {
-    std::lock_guard lock{ pendingSessionsToEraseMutex_ };
-    if (pendingSessionsToErase_.empty())
+    const auto contextToErase = [this] -> std::optional<uint32_t>
     {
-        return std::nullopt;
-    }
+        std::lock_guard lock{ pendingSessionsToEraseMutex_ };
+        if (pendingSessionsToErase_.empty())
+        {
+            return std::nullopt;
+        }
 
-    const uint32_t context = pendingSessionsToErase_.back();
-    auto& session = sessions_.at(context);
+        const uint32_t context = pendingSessionsToErase_.back();
+        pendingSessionsToErase_.pop_back();
+        return context;
+    }();
+
+    auto& session = sessions_.at(*contextToErase);
 
     const int eraseIndex = [&]
     {
@@ -125,9 +131,8 @@ std::optional<uint32_t> NetworkServer::TryClearClosedSession()
     sessionArray_[eraseIndex] = sessionArray_.back();
     sessionArray_.pop_back();
 
-    sessions_.erase(context);
-    pendingSessionsToErase_.pop_back();
-    return context;
+    sessions_.erase(*contextToErase);
+    return *contextToErase;
 }
 
 void NetworkServer::PrepareAcceptPool()
