@@ -7,7 +7,6 @@
 
 #include "StcProxy.gen.h"
 #include "NetworkServer.h"
-#include <google/protobuf/arena.h>
 
 class Proxy final : public RatkiniaProtocol::StcProxy<Proxy>
 {
@@ -22,14 +21,8 @@ public:
         networkServer_.SendMessage(context, static_cast<uint16_t>(messageType), message);
     }
 
-    google::protobuf::Arena* GetArena()
-    {
-        return &arena_;
-    }
-
 private:
     NetworkServer& networkServer_;
-    google::protobuf::Arena arena_;
 };
 
 #endif //RATKINIASERVER_STCPROXY_H

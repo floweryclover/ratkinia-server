@@ -98,7 +98,7 @@ NetworkServer::~NetworkServer()
 
 std::optional<uint32_t> NetworkServer::TryClearClosedSession()
 {
-    const auto contextToErase = [this] -> std::optional<uint32_t>
+    const auto contextToErase = [this]() -> std::optional<uint32_t>
     {
         std::lock_guard lock{ pendingSessionsToEraseMutex_ };
         if (pendingSessionsToErase_.empty())
@@ -110,6 +110,10 @@ std::optional<uint32_t> NetworkServer::TryClearClosedSession()
         pendingSessionsToErase_.pop_back();
         return context;
     }();
+    if (!contextToErase)
+    {
+        return std::nullopt;
+    }
 
     auto& session = sessions_.at(*contextToErase);
 

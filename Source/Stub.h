@@ -6,7 +6,6 @@
 #define RATKINIASERVER_STUB_H
 
 #include "CtsStub.gen.h"
-#include <google/protobuf/arena.h>
 
 struct MutableEnvironment;
 
@@ -35,14 +34,8 @@ public:
 
     void OnSelectCharacter(uint32_t context, uint32_t id) override;
 
-    google::protobuf::Arena* GetArena()
-    {
-        return &arena_;
-    }
-
 private:
     MutableEnvironment& environment_;
-    google::protobuf::Arena arena_;
 };
 
 #endif //RATKINIASERVER_STUB_H
