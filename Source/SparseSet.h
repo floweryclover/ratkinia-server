@@ -17,7 +17,7 @@ template<typename T>
 class SparseSet final : public RawSparseSet
 {
 public:
-    std::vector<std::pair<uint32_t, T>> Data;
+    std::vector<std::pair<Entity, T>> Data;
 };
 
 #endif //SPARSESET_H

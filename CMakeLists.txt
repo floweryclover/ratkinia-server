@@ -31,8 +31,7 @@ target_include_directories(${PROJECT_NAME}
 
 target_include_directories(${PROJECT_NAME}
         PRIVATE
-        ../ratkinia-protocol/Out/Common
-        ../ratkinia-protocol/Out/Server)
+        ../ratkinia-protocol/Out/Server/Include)
 
 target_include_directories(${PROJECT_NAME} PRIVATE Thirdparty/libbcrypt/include)
 

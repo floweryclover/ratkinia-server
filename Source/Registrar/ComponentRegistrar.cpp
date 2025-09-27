@@ -5,9 +5,11 @@
 #include "ComponentRegistrar.h"
 #include "Registrar.h"
 
+#include "C_HumanLikeBody.h"
 #include "C_NameTag.h"
 
 void RegisterComponents(Registrar& registrar)
 {
+    registrar.RegisterComponent<C_HumanLikeBody>();
     registrar.RegisterComponent<C_NameTag>();
 }

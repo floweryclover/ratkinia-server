@@ -8,6 +8,8 @@
 #include "G_PlayerCharacters.h"
 #include <pqxx/pqxx>
 
+#include "ComponentManager.h"
+#include "C_HumanLikeBody.h"
 #include "EntityManager.h"
 
 using namespace pqxx;
@@ -26,6 +28,6 @@ void S_Initializer_PlayerCharacters(const MutableEnvironment& environment)
 
         const auto entity = environment.EntityManager.Create();
         g_playerCharacters.AddOwnership(playerId, characterId, entity);
-        std::cout << "Spawned " << entity.GetId() << " For Player " << playerId << " With CharacterId " << characterId << std::endl;
+        environment.ComponentManager.AttachComponentTo<C_HumanLikeBody>(entity);
     }
 }

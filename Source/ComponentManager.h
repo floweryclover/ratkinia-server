@@ -5,6 +5,7 @@
 #ifndef COMPONENTMANAGER_H
 #define COMPONENTMANAGER_H
 
+#include "Entity.h"
 #include "SparseSet.h"
 #include "ErrorMacros.h"
 #include <memory>
@@ -28,21 +29,23 @@ public:
     ComponentManager& operator=(ComponentManager&&) = delete;
 
     template<typename TComponent>
-    TComponent* AttachComponentTo(const uint32_t entity)
+    TComponent* AttachComponentTo(const Entity entity)
     {
         auto& sparseSet = static_cast<SparseSet<TComponent>&>(*sparseSets_[TComponent::GetRuntimeOrder()]);
-        return &sparseSet.Data.emplace_back(entity).second;
+        auto& emplaced = sparseSet.Data.emplace_back();
+        emplaced.first = entity;
+        return &emplaced.second;
     }
 
     template<typename TComponent>
-    std::vector<std::pair<uint32_t, TComponent>>& Components()
+    std::vector<std::pair<Entity, TComponent>>& Components()
     {
         auto& sparseSet = static_cast<SparseSet<TComponent>&>(*sparseSets_[TComponent::GetRuntimeOrder()]);
         return sparseSet.Data;
     }
 
     template<typename TComponent>
-    TComponent* GetComponentOf(const uint32_t entity)
+    TComponent* GetComponentOf(const Entity entity)
     {
         auto& sparseSet = static_cast<SparseSet<TComponent>&>(*sparseSets_[TComponent::GetRuntimeOrder()]);
         for (auto& [componentOwnerEntity, component] : sparseSet.Data)

@@ -77,7 +77,6 @@ public:
     {
         auto [index, version] = list_.Create();
         version = GetIncrementVersion(version);
-
         return Entity{ index, version };
     }
 

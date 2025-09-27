@@ -19,6 +19,7 @@
 #include <pqxx/pqxx>
 #include <regex>
 
+#include "C_HumanLikeBody.h"
 #include "G_PlayerCharacters.h"
 
 
@@ -176,28 +177,34 @@ void Stub::OnSelectCharacter(const uint32_t context, const uint32_t id)
         return;
     }
 
-    for (const auto entityaa : environment_.EntityManager)
-    {
-    std::cout << "I have " << entityaa.GetId() << std::endl;
-    }
-    std::cout << "I haveddd"  << std::endl;
     environment_.Proxy.OpenWorld(context);
+
     environment_.Proxy.SpawnEntity(
         context,
         environment_.EntityManager,
         [entity](const Entity worldEntity, SpawnEntity_Data& data)
         {
-            std::cout << "Sent " << worldEntity.GetId() << std::endl;
             data.set_type(worldEntity == entity ? SpawnEntity_Type_MyCharacter : SpawnEntity_Type_Normal);
-            data.set_entity_id(entity.GetId());
+            data.set_entity_id(worldEntity.GetId());
         });
 
-    environment_.Proxy.AttachComponentTo(
+    environment_.Proxy.AttachComponent(
         context,
-        environment_.ComponentManager.Components<C_NameTag>(),
-        [](const std::pair<uint32_t, C_NameTag>& pair, AttachComponentTo_Data& data)
+        environment_.ComponentManager.Components<C_HumanLikeBody>(),
+        [](const std::pair<Entity, C_HumanLikeBody>& pair, AttachComponent_Data& data)
         {
-            data.set_target_entity(pair.first);
-            data.mutable_component_variant()->mutable_name_tag()->set_name(std::to_string(pair.first));
+            data.set_target_entity(pair.first.GetId());
+            data.set_component_runtime_order(C_HumanLikeBody::GetRuntimeOrder());
+        });
+    static int cnt;
+    ++cnt;
+
+    environment_.Proxy.UpdateComponent(
+        context,
+        environment_.ComponentManager.Components<C_HumanLikeBody>(),
+        [](const std::pair<Entity, C_HumanLikeBody>& pair, UpdateComponent_Data& data)
+        {
+            data.set_target_entity(pair.first.GetId());
+            data.mutable_component_variant()->mutable_human_like_body()->set_static_mesh_name(cnt % 2 ? "Normal" : "Cube");
         });
 }
