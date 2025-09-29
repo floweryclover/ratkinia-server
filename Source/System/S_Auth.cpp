@@ -3,17 +3,20 @@
 //
 
 #include "S_Auth.h"
-#include "Database.h"
+#include "DatabaseManager.h"
 #include "Environment.h"
 #include "GlobalObjectManager.h"
 #include "EventManager.h"
 #include "Event_SessionErased.h"
 #include "G_Auth.h"
 #include "Proxy.h"
-#include <pqxx/pqxx>
 
-using namespace Database;
-using namespace pqxx;
+constexpr const char* FailedReason[] =
+{
+    "",
+    "중복된 아이디입니다.",
+    "알 수 없는 에러가 발생하였습니다."
+};
 
 void S_Auth(const MutableEnvironment& environment)
 {
@@ -45,34 +48,27 @@ void S_Auth(const MutableEnvironment& environment)
             else if (contextAddResult == G_Auth::AuthenticationResult::IdAlreadyOnline)
             {
                 environment.Proxy.LoginResponse(loginJob.Context,
-                                                   RatkiniaProtocol::LoginResponse_LoginResult_DuplicateAccount);
+                                                RatkiniaProtocol::LoginResponse_LoginResult_DuplicateAccount);
             }
             else
             {
                 environment.Proxy.LoginResponse(loginJob.Context,
-                                                   RatkiniaProtocol::LoginResponse_LoginResult_DuplicateContext);
+                                                RatkiniaProtocol::LoginResponse_LoginResult_DuplicateContext);
             }
         }
         else
         {
             auto& registerJob = std::get<RegisterJob>(*job);
-            nontransaction sameIdSearchWork{ environment.DbConnection };
-            if (const auto sameIdSearchResult = sameIdSearchWork.exec(Prepped_FindUserId, registerJob.Id);
-                !sameIdSearchResult.empty())
+            const auto result = environment.DatabaseManager.TryCreateAccount(
+                registerJob.Id,
+                registerJob.GetHashedPassword());
+
+            if (result != DatabaseManager::CreateAccountResult::Success)
             {
-                environment.Proxy.RegisterResponse(registerJob.Context, false, "중복된 ID입니다.");
+                environment.Proxy.RegisterResponse(registerJob.Context, false, FailedReason[static_cast<int>(result)]);
                 return;
             }
-            sameIdSearchWork.commit();
-            work insertAccountWork{ environment.DbConnection };
-            const auto insertAccountResult = insertAccountWork.exec(Prepped_CreateAccount,
-                                                                    params{
-                                                                        registerJob.Id, registerJob.GetHashedPassword()
-                                                                    });
-            insertAccountWork.commit();
 
-            const bool isSuccessful = insertAccountResult.affected_rows() == 1;
-            CRASH_COND(!isSuccessful);
             environment.Proxy.RegisterResponse(registerJob.Context, true, "");
         }
     }

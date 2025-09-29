@@ -58,7 +58,15 @@ int main()
         }
     };
 
-    mainServer.Run();
+    try
+    {
+        mainServer.Run();
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
+        std::abort();
+    }
 
     // ReSharper disable once CppDFAUnreachableCode
     return 0;

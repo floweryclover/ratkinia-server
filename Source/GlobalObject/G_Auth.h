@@ -26,11 +26,11 @@ struct G_Auth final : GlobalObject
 
     explicit G_Auth();
 
-    AuthenticationResult TryAuthenticate(uint32_t context, uint32_t id);
+    AuthenticationResult TryAuthenticate(uint32_t context, uint64_t id);
 
     void DeauthenticateByContext(uint32_t context);
 
-    void DeauthenticateById(uint32_t id);
+    void DeauthenticateByPlayerId(uint64_t id);
 
     std::optional<AuthJob> TryPopFinishedBackgroundJob()
     {
@@ -47,12 +47,12 @@ struct G_Auth final : GlobalObject
         return std::make_optional(std::move(returnValue));
     }
 
-    std::optional<uint32_t> TryGetIdOfContext(const uint32_t context)
+    std::optional<uint64_t> TryGetPlayerIdOfContext(const uint32_t context)
     {
         return contextIdMap_.contains(context) ? std::make_optional(contextIdMap_.at(context)) : std::nullopt;
     }
 
-    std::optional<uint32_t> TryGetContextOfId(const uint32_t id)
+    std::optional<uint32_t> TryGetContextOfPlayerId(const uint64_t id)
     {
         return idContextMap_.contains(id) ? std::make_optional(idContextMap_.at(id)) : std::nullopt;
     }
@@ -65,8 +65,8 @@ struct G_Auth final : GlobalObject
     }
 
 private:
-    std::unordered_map<uint32_t, uint32_t> contextIdMap_;
-    std::unordered_map<uint32_t, uint32_t> idContextMap_;
+    std::unordered_map<uint32_t, uint64_t> contextIdMap_;
+    std::unordered_map<uint64_t, uint32_t> idContextMap_;
 
     std::thread authThread_;
     std::atomic_bool shouldAuthThreadStop_;

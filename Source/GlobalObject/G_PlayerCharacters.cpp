@@ -7,6 +7,7 @@
 
 void G_PlayerCharacters::AddOwnership(const uint32_t playerId, const uint32_t characterId, const Entity entity)
 {
+    std::cout << playerId <<" OWNES " << characterId << " ENTITY " << entity.GetId() << std::endl;
     const bool integrityError = characterEntityMap_.Get(characterId) ||
                                 entityPlayerMap_.Get(entity.GetId()) ||
                                 entityCharacterMap_.Get(entity.GetId());

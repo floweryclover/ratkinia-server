@@ -111,7 +111,6 @@ private:
     std::vector<System> systems_;
     std::vector<std::unique_ptr<RawEventQueue>> eventQueues_;
     std::vector<std::unique_ptr<GlobalObject>> globalObjects_;
-
     std::vector<System> initializerSystems_;
 };
 

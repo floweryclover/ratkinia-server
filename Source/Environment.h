@@ -6,16 +6,11 @@
 #define ENVIRONMENT_H
 
 class Proxy;
-
-namespace pqxx
-{
-    class connection;
-}
-
 class EntityManager;
 class ComponentManager;
 class GlobalObjectManager;
 class EventManager;
+class DatabaseManager;
 
 struct ImmutableEnvironment final
 {
@@ -23,6 +18,7 @@ struct ImmutableEnvironment final
     const ComponentManager& ComponentManager;
     const GlobalObjectManager& GlobalObjectManager;
     const EventManager& EventManager;
+    const DatabaseManager& DatabaseManager;
 };
 
 struct MutableEnvironment final
@@ -31,17 +27,18 @@ struct MutableEnvironment final
     ComponentManager& ComponentManager;
     GlobalObjectManager& GlobalObjectManager;
     EventManager& EventManager;
-    pqxx::connection& DbConnection;
+    DatabaseManager& DatabaseManager;
     Proxy& Proxy;
 
-    ImmutableEnvironment operator()()
+    ImmutableEnvironment operator()() const
     {
         return
         {
             EntityManager,
             ComponentManager,
             GlobalObjectManager,
-            EventManager
+            EventManager,
+            DatabaseManager
         };
     }
 };

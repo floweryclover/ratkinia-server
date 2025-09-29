@@ -4,7 +4,7 @@
 
 #include "Stub.h"
 #include "AuthJob.h"
-#include "Database.h"
+#include "DatabaseManager.h"
 #include "Environment.h"
 #include "Proxy.h"
 #include "ComponentManager.h"
@@ -12,19 +12,14 @@
 #include "GlobalObjectManager.h"
 
 #include "C_NameTag.h"
+#include "C_HumanLikeBody.h"
 
 #include "G_Auth.h"
 #include "G_Possession.h"
-
-#include <pqxx/pqxx>
-#include <regex>
-
-#include "C_HumanLikeBody.h"
 #include "G_PlayerCharacters.h"
 
+#include <regex>
 
-using namespace pqxx;
-using namespace Database;
 using namespace RatkiniaProtocol;
 
 Stub::Stub(MutableEnvironment& environment)
@@ -46,15 +41,13 @@ void Stub::OnLoginRequest(const uint32_t context,
                           const std::string& id,
                           const std::string& password)
 {
-    nontransaction work{ environment_.DbConnection };
-    const auto res = work.exec(Prepped_FindUserId, id);
-
+    const auto account = environment_.DatabaseManager.TryGetAccountByUserId(id);
     std::array<char, 64> savedPassword;
     uint32_t pkeyId = LoginJob::InvalidId;
-    if (!res.empty())
+    if (account)
     {
-        pkeyId = res[0][0].as<uint32_t>();
-        const auto savedPasswordString = res[0][2].as<std::string>();
+        pkeyId = account->Id;
+        const auto savedPasswordString = account->Password;
         const size_t copySize = savedPasswordString.size() + 1;
         memcpy(savedPassword.data(), savedPasswordString.c_str(), copySize);
     }
@@ -70,59 +63,72 @@ void Stub::OnRegisterRequest(const uint32_t context,
                              const std::string& id,
                              const std::string& password)
 {
-    if (password.length() < 8 || password.length() > 32)
+
+    if (id.length() < 6)
     {
-        environment_.Proxy.RegisterResponse(context, false, "비밀번호는 8자 이상 32자 이하여야 합니다.");
+        environment_.Proxy.RegisterResponse(context, false, "아이디가 너무 짧습니다.");
+        return;
+    }
+    if (id.length() > 24)
+    {
+        environment_.Proxy.RegisterResponse(context, false, "아이디가 너무 깁니다.");
+        return;
+    }
+    if (const std::regex invalidAccountRegex{ R"([^a-z0-9_])" };
+        std::regex_search(id, invalidAccountRegex))
+    {
+        environment_.Proxy.RegisterResponse(context, false, "아이디는 영문 소문자, 숫자 또는 언더스코어(_)로만 구성되어야 합니다.");
         return;
     }
 
-    const std::regex invalidCharactersRegex{ R"([^a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])" };
-    if (std::regex_search(password, invalidCharactersRegex))
+
+    if (password.length() < 8)
     {
-        environment_.Proxy.RegisterResponse(context, false, "비밀번호에 허용되지 않는 문자가 존재합니다.");
+        environment_.Proxy.RegisterResponse(context, false, "패스워드가 너무 짧습니다.");
         return;
     }
-
+    if (password.length() > 32)
+    {
+        environment_.Proxy.RegisterResponse(context, false, "패스워드가 너무 깁니다.");
+        return;
+    }
+    if (const std::regex invalidPasswordRegex{ R"([^a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])" };
+        std::regex_search(password, invalidPasswordRegex))
+    {
+        environment_.Proxy.RegisterResponse(context, false, "패스워드에 허용되지 않는 문자가 존재합니다.");
+        return;
+    }
     environment_.GlobalObjectManager.Get<G_Auth>().CreateAuthJob<RegisterJob>(context, id, password);
 }
 
 void Stub::OnCreateCharacter(const uint32_t context, const std::string& name)
 {
-    if (name.length() == 0 || name.length() > 36)
+    const auto playerId = environment_.GlobalObjectManager.Get<G_Auth>().TryGetPlayerIdOfContext(context);
+    if (!playerId)
+    {
+        environment_.Proxy.CreateCharacterResponse(context, CreateCharacterResponse_CreateCharacterResult_UnknownError);
+        return;
+    }
+
+    const auto [createCharacterResult, characterId] = environment_.DatabaseManager.TryCreatePlayerCharacter(*playerId, name);
+    if (createCharacterResult == DatabaseManager::CreateCharacterResult::DuplicateName)
+    {
+        environment_.Proxy.CreateCharacterResponse(context, CreateCharacterResponse_CreateCharacterResult_DuplicateName);
+        return;
+    }
+    if (createCharacterResult == DatabaseManager::CreateCharacterResult::InvalidFormat)
     {
         environment_.Proxy.CreateCharacterResponse(context,
                                                    CreateCharacterResponse_CreateCharacterResult_InvalidNameLength);
         return;
     }
 
-    if (nontransaction findPlayerCharacterByName{ environment_.DbConnection };
-        !findPlayerCharacterByName.exec(Prepped_FindPlayerCharacterByName, name).empty())
+    if (createCharacterResult == DatabaseManager::CreateCharacterResult::UnknownError)
     {
-        environment_.Proxy.CreateCharacterResponse(context,
-                                                   CreateCharacterResponse_CreateCharacterResult_DuplicateName);
+        environment_.Proxy.CreateCharacterResponse(context, CreateCharacterResponse_CreateCharacterResult_UnknownError);
         return;
     }
 
-    const auto playerId = environment_.GlobalObjectManager.Get<G_Auth>().TryGetIdOfContext(context);
-    if (!playerId)
-    {
-        environment_.Proxy.CreateCharacterResponse(context,
-                                                   CreateCharacterResponse_CreateCharacterResult_UnknownError);
-        return;
-    }
-
-    work insertPlayerCharacter{ environment_.DbConnection };
-    const auto results = insertPlayerCharacter.exec(Prepped_CreatePlayerCharacter, params{ *playerId, name });
-    insertPlayerCharacter.commit();
-
-    if (results.empty())
-    {
-        environment_.Proxy.CreateCharacterResponse(context,
-                                                   CreateCharacterResponse_CreateCharacterResult_UnknownError);
-        return;
-    }
-
-    const uint32_t characterId = results[0][0].as<uint32_t>();
     const auto entity = environment_.EntityManager.Create();
 
     environment_.Proxy.CreateCharacterResponse(context, CreateCharacterResponse_CreateCharacterResult_Success);
@@ -132,32 +138,36 @@ void Stub::OnCreateCharacter(const uint32_t context, const std::string& name)
 void Stub::OnLoadMyCharacters(const uint32_t context)
 {
     auto& g_auth = environment_.GlobalObjectManager.Get<G_Auth>();
-    const auto id = g_auth.TryGetIdOfContext(context);
-    if (!id)
+    const auto playerId = g_auth.TryGetPlayerIdOfContext(context);
+    if (!playerId)
     {
-        environment_.Proxy.Notificate(context, Notificate_Type_Fatal, "로그인 세션이 유효하지 않습니다.");
+        environment_.Proxy.Notify(context, Notify_Type_Fatal, "로그인 세션이 유효하지 않습니다.");
         return;
     }
 
-    nontransaction loadMyCharacters{ environment_.DbConnection };
-    const auto result = loadMyCharacters.exec(Prepped_LoadMyCharacters, *id);
+    const auto characters = environment_.DatabaseManager.TryGetPlayerCharactersByPlayerId(*playerId);
+    if (!characters)
+    {
+        return;
+    }
+
     environment_.Proxy.SendMyCharacters(
         context,
-        result,
-        [](const row& row, SendMyCharacters_Data& data)
+        *characters,
+        [this](const DatabaseManager::PlayerCharacterRow* const playerCharacter, SendMyCharacters_Data& data)
         {
-            data.set_id(row[0].as<uint32_t>());
-            data.set_name(row[2].as<std::string>());
+            data.set_id(playerCharacter->Id);
+            data.set_name(playerCharacter->Name);
         });
 }
 
-void Stub::OnSelectCharacter(const uint32_t context, const uint32_t id)
+void Stub::OnSelectCharacter(const uint32_t context, const uint64_t id)
 {
     auto& g_auth = environment_.GlobalObjectManager.Get<G_Auth>();
-    const auto playerId = g_auth.TryGetIdOfContext(context);
+    const auto playerId = g_auth.TryGetPlayerIdOfContext(context);
     if (!playerId)
     {
-        environment_.Proxy.Notificate(context, Notificate_Type_Fatal, "로그인이 필요합니다.");
+        environment_.Proxy.Notify(context, Notify_Type_Fatal, "로그인이 필요합니다.");
         return;
     }
 
@@ -165,7 +175,7 @@ void Stub::OnSelectCharacter(const uint32_t context, const uint32_t id)
     const auto entity = g_playerCharacters.GetEntityOf(*playerId, id);
     if (!entity)
     {
-        environment_.Proxy.Notificate(context, Notificate_Type_Fatal, "요청한 플레이어와 캐릭터에 해당하는 엔티티를 찾을 수 없습니다.");
+        environment_.Proxy.Notify(context, Notify_Type_Fatal, "요청한 플레이어와 캐릭터에 해당하는 엔티티를 찾을 수 없습니다.");
         return;
     }
 
@@ -173,7 +183,7 @@ void Stub::OnSelectCharacter(const uint32_t context, const uint32_t id)
     if (const auto possessionResult = g_possession.TryPossess(context, entity);
         possessionResult != G_Possession::PosessionResult::Success)
     {
-        environment_.Proxy.Notificate(context, Notificate_Type_Fatal, "이미 접속 중입니다.");
+        environment_.Proxy.Notify(context, Notify_Type_Fatal, "이미 접속 중입니다.");
         return;
     }
 

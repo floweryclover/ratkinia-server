@@ -10,7 +10,7 @@ G_Auth::G_Auth()
 {
 }
 
-G_Auth::AuthenticationResult G_Auth::TryAuthenticate(const uint32_t context, const uint32_t id)
+G_Auth::AuthenticationResult G_Auth::TryAuthenticate(const uint32_t context, const uint64_t id)
 {
     if (contextIdMap_.contains(context))
     {
@@ -38,7 +38,7 @@ void G_Auth::DeauthenticateByContext(const uint32_t context)
     contextIdMap_.erase(contextIdPair);
 }
 
-void G_Auth::DeauthenticateById(const uint32_t id)
+void G_Auth::DeauthenticateByPlayerId(const uint64_t id)
 {
     const auto idContextPair = idContextMap_.find(id);
     if (idContextPair == idContextMap_.end())

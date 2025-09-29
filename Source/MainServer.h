@@ -10,14 +10,13 @@
 #include "EntityManager.h"
 #include "NetworkServer.h"
 #include "ComponentManager.h"
+#include "DatabaseManager.h"
 #include "GlobalObjectManager.h"
 #include "EventManager.h"
-#include "Floweryclover/ParallelExecutor.h"
 #include "System.h"
 #include "Stub.h"
 #include "Proxy.h"
 #include "ErrorMacros.h"
-#include <pqxx/pqxx>
 #include <thread>
 #include <queue>
 
@@ -27,9 +26,9 @@ class MainServer final
 {
 public:
     explicit MainServer(Registrar registrar,
-                        std::string listenAddress,
+                        const char* listenAddress,
                         uint16_t listenPort,
-                        std::string dbHost,
+                        const char* dbHost,
                         uint16_t acceptPoolSize,
                         const char* certificateFile,
                         const char* privateKeyFile);
@@ -46,13 +45,6 @@ public:
 
     [[noreturn]] void Run();
 
-    [[nodiscard]]
-    pqxx::connection& GetDbConnection()
-    {
-        CRASH_COND(!dbConnection_.is_open());
-        return dbConnection_;
-    }
-
     void AddCommand(std::string command)
     {
         std::lock_guard lock{ commandsMutex_ };
@@ -60,18 +52,13 @@ public:
     }
 
 private:
-    const std::string ListenAddress;
-    const uint16_t ListenPort;
-    const std::string DbHost;
-
     std::queue<std::string> commands_;
     std::mutex commandsMutex_;
 
     NetworkServer networkServer_;
-    Floweryclover::ParallelExecutor executor_;
     Stub stub_;
     Proxy proxy_;
-    pqxx::connection dbConnection_;
+    DatabaseManager database_;
     std::thread thread_;
 
     EntityManager entityManager_;

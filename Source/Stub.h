@@ -32,7 +32,7 @@ public:
 
     void OnLoadMyCharacters(uint32_t context) override;
 
-    void OnSelectCharacter(uint32_t context, uint32_t id) override;
+    void OnSelectCharacter(uint32_t context, uint64_t id) override;
 
 private:
     MutableEnvironment& environment_;
