@@ -6,27 +6,22 @@
 #define RATKINIASERVER_MAINSERVER_H
 
 #include "Environment.h"
-#include "Registrar.h"
-#include "EntityManager.h"
 #include "NetworkServer.h"
+#include "EntityManager.h"
 #include "ComponentManager.h"
-#include "DatabaseManager.h"
-#include "GlobalObjectManager.h"
-#include "EventManager.h"
-#include "System.h"
+#include "SystemManager.h"
+#include "Event/EventManager.h"
+#include "GlobalObject/GlobalObjectManager.h"
+#include "Database/DatabaseManager.h"
 #include "Stub.h"
 #include "Proxy.h"
 #include "ErrorMacros.h"
-#include <thread>
 #include <queue>
-
-class NetworkServer;
 
 class MainServer final
 {
 public:
-    explicit MainServer(Registrar registrar,
-                        const char* listenAddress,
+    explicit MainServer(const char* listenAddress,
                         uint16_t listenPort,
                         const char* dbHost,
                         uint16_t acceptPoolSize,
@@ -58,16 +53,13 @@ private:
     NetworkServer networkServer_;
     Stub stub_;
     Proxy proxy_;
-    DatabaseManager database_;
-    std::thread thread_;
 
     EntityManager entityManager_;
     ComponentManager componentManager_;
-    std::vector<System> systems_;
+    SystemManager systemManager_;
     EventManager eventManager_;
     GlobalObjectManager globalObjectManager_;
-
-    std::vector<System> initializerSystems_;
+    DatabaseManager databaseManager_;
 
     MutableEnvironment environment_;
 };

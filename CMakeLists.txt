@@ -21,7 +21,7 @@ target_include_directories(${PROJECT_NAME}
         "Source/GlobalObject"
         "Source/Component"
         "Source/Event"
-        "Source/Registrar"
+        "Source/Database"
         "Source/Util")
 
 target_include_directories(${PROJECT_NAME}

@@ -5,8 +5,8 @@
 #ifndef GLOBALOBJECTREGISTERAR_H
 #define GLOBALOBJECTREGISTERAR_H
 
-class Registrar;
+class GlobalObjectManager;
 
-void RegisterGlobalObjects(Registrar& registrar);
+void RegisterGlobalObjects(GlobalObjectManager& globalObjectManager);
 
 #endif //GLOBALOBJECTREGISTERAR_H

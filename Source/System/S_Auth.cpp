@@ -3,10 +3,12 @@
 //
 
 #include "S_Auth.h"
-#include "DatabaseManager.h"
+
+#include "D_Accounts.h"
+#include "../Database/DatabaseManager.h"
 #include "Environment.h"
-#include "GlobalObjectManager.h"
-#include "EventManager.h"
+#include "../GlobalObject/GlobalObjectManager.h"
+#include "../Event/EventManager.h"
 #include "Event_SessionErased.h"
 #include "G_Auth.h"
 #include "Proxy.h"
@@ -59,11 +61,11 @@ void S_Auth(const MutableEnvironment& environment)
         else
         {
             auto& registerJob = std::get<RegisterJob>(*job);
-            const auto result = environment.DatabaseManager.TryCreateAccount(
+            const auto result = environment.DatabaseManager.Get<D_Accounts>().TryCreateAccount(
                 registerJob.Id,
                 registerJob.GetHashedPassword());
 
-            if (result != DatabaseManager::CreateAccountResult::Success)
+            if (result != D_Accounts::CreateAccountResult::Success)
             {
                 environment.Proxy.RegisterResponse(registerJob.Context, false, FailedReason[static_cast<int>(result)]);
                 return;

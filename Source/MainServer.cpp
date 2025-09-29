@@ -3,13 +3,19 @@
 //
 
 #include "MainServer.h"
+
+#include "ComponentRegistrar.h"
+#include "DatabaseRegistrar.h"
+#include "SystemRegistrar.h"
+#include "EventRegistrar.h"
+#include "GlobalObjectRegistrar.h"
 #include "NetworkServer.h"
 #include "Event_SessionErased.h"
 
+
 using namespace pqxx;
 
-MainServer::MainServer(Registrar registrar,
-                       const char* const listenAddress,
+MainServer::MainServer(const char* const listenAddress,
                        const uint16_t listenPort,
                        const char* const dbHost,
                        const uint16_t acceptPoolSize,
@@ -25,19 +31,20 @@ MainServer::MainServer(Registrar registrar,
       },
       stub_{ environment_ },
       proxy_{ networkServer_ },
-      database_{ dbHost },
-      componentManager_{ registrar.GetSparseSets() },
-      systems_{ registrar.GetSystems() },
-      eventManager_{ registrar.GetEventQueues() },
-      globalObjectManager_{ registrar.GetGlobalObjects() },
-      initializerSystems_{ registrar.GetInitializerSystems() },
-      environment_{ entityManager_, componentManager_, globalObjectManager_, eventManager_, database_, proxy_ }
+      databaseManager_{ dbHost },
+      environment_{ entityManager_, componentManager_, globalObjectManager_, eventManager_, databaseManager_, proxy_ }
 {
 }
 
 void MainServer::Run()
 {
-    for (const auto initializerSystem : initializerSystems_)
+    RegisterComponents(componentManager_);
+    RegisterSystems(systemManager_);
+    RegisterEvents(eventManager_);
+    RegisterGlobalObjects(globalObjectManager_);
+    RegisterDatabases(databaseManager_);
+
+    for (const auto initializerSystem : systemManager_.InitializerSystems())
     {
         initializerSystem(environment_);
     }
@@ -96,7 +103,7 @@ void MainServer::Run()
         }
 
         // 메인 게임 로직
-        for (const auto system : systems_)
+        for (const auto system : systemManager_.Systems())
         {
             system(environment_);
         }

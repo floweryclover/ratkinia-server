@@ -4,12 +4,12 @@
 
 #include "Stub.h"
 #include "AuthJob.h"
-#include "DatabaseManager.h"
+#include "Database/DatabaseManager.h"
 #include "Environment.h"
 #include "Proxy.h"
-#include "ComponentManager.h"
+#include "Component/ComponentManager.h"
 #include "EntityManager.h"
-#include "GlobalObjectManager.h"
+#include "GlobalObject/GlobalObjectManager.h"
 
 #include "C_NameTag.h"
 #include "C_HumanLikeBody.h"
@@ -20,6 +20,9 @@
 
 #include <regex>
 
+#include "D_Accounts.h"
+#include "D_PlayerCharacters.h"
+
 using namespace RatkiniaProtocol;
 
 Stub::Stub(MutableEnvironment& environment)
@@ -27,13 +30,11 @@ Stub::Stub(MutableEnvironment& environment)
 {
 }
 
-void Stub::OnParseMessageFailed(const uint32_t context,
-                                RatkiniaProtocol::CtsMessageType messageType)
+void Stub::OnParseMessageFailed(const uint32_t context, CtsMessageType messageType)
 {
 }
 
-void Stub::OnUnknownMessageType(const uint32_t context,
-                                RatkiniaProtocol::CtsMessageType messageType)
+void Stub::OnUnknownMessageType(const uint32_t context, CtsMessageType messageType)
 {
 }
 
@@ -41,7 +42,7 @@ void Stub::OnLoginRequest(const uint32_t context,
                           const std::string& id,
                           const std::string& password)
 {
-    const auto account = environment_.DatabaseManager.TryGetAccountByUserId(id);
+    const auto account = environment_.DatabaseManager.Get<D_Accounts>().TryGetAccountByUserId(id);
     std::array<char, 64> savedPassword;
     uint32_t pkeyId = LoginJob::InvalidId;
     if (account)
@@ -103,6 +104,7 @@ void Stub::OnRegisterRequest(const uint32_t context,
 
 void Stub::OnCreateCharacter(const uint32_t context, const std::string& name)
 {
+    auto& d_playerCharacters = environment_.DatabaseManager.Get<D_PlayerCharacters>();
     const auto playerId = environment_.GlobalObjectManager.Get<G_Auth>().TryGetPlayerIdOfContext(context);
     if (!playerId)
     {
@@ -110,20 +112,20 @@ void Stub::OnCreateCharacter(const uint32_t context, const std::string& name)
         return;
     }
 
-    const auto [createCharacterResult, characterId] = environment_.DatabaseManager.TryCreatePlayerCharacter(*playerId, name);
-    if (createCharacterResult == DatabaseManager::CreateCharacterResult::DuplicateName)
+    const auto [createCharacterResult, characterId] = d_playerCharacters.TryCreatePlayerCharacter(*playerId, name);
+    if (createCharacterResult == D_PlayerCharacters::CreateCharacterResult::DuplicateName)
     {
         environment_.Proxy.CreateCharacterResponse(context, CreateCharacterResponse_CreateCharacterResult_DuplicateName);
         return;
     }
-    if (createCharacterResult == DatabaseManager::CreateCharacterResult::InvalidFormat)
+    if (createCharacterResult == D_PlayerCharacters::CreateCharacterResult::InvalidFormat)
     {
         environment_.Proxy.CreateCharacterResponse(context,
                                                    CreateCharacterResponse_CreateCharacterResult_InvalidNameLength);
         return;
     }
 
-    if (createCharacterResult == DatabaseManager::CreateCharacterResult::UnknownError)
+    if (createCharacterResult == D_PlayerCharacters::CreateCharacterResult::UnknownError)
     {
         environment_.Proxy.CreateCharacterResponse(context, CreateCharacterResponse_CreateCharacterResult_UnknownError);
         return;
@@ -137,6 +139,7 @@ void Stub::OnCreateCharacter(const uint32_t context, const std::string& name)
 
 void Stub::OnLoadMyCharacters(const uint32_t context)
 {
+    auto& d_playerCharacters = environment_.DatabaseManager.Get<D_PlayerCharacters>();
     auto& g_auth = environment_.GlobalObjectManager.Get<G_Auth>();
     const auto playerId = g_auth.TryGetPlayerIdOfContext(context);
     if (!playerId)
@@ -145,7 +148,7 @@ void Stub::OnLoadMyCharacters(const uint32_t context)
         return;
     }
 
-    const auto characters = environment_.DatabaseManager.TryGetPlayerCharactersByPlayerId(*playerId);
+    const auto characters = d_playerCharacters.TryGetPlayerCharactersByPlayerId(*playerId);
     if (!characters)
     {
         return;
@@ -154,7 +157,7 @@ void Stub::OnLoadMyCharacters(const uint32_t context)
     environment_.Proxy.SendMyCharacters(
         context,
         *characters,
-        [this](const DatabaseManager::PlayerCharacterRow* const playerCharacter, SendMyCharacters_Data& data)
+        [](const D_PlayerCharacters::PlayerCharacterRow* const playerCharacter, SendMyCharacters_Data& data)
         {
             data.set_id(playerCharacter->Id);
             data.set_name(playerCharacter->Name);

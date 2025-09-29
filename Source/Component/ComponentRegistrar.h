@@ -5,8 +5,8 @@
 #ifndef COMPONENTREGISTRAR_H
 #define COMPONENTREGISTRAR_H
 
-class Registrar;
+class ComponentManager;
 
-void RegisterComponents(Registrar& registrar);
+void RegisterComponents(ComponentManager& componentManager);
 
 #endif //COMPONENTREGISTRAR_H

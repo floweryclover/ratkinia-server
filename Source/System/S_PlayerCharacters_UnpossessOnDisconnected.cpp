@@ -5,8 +5,8 @@
 #include "S_PlayerCharacters_UnpossessOnDisconnected.h"
 
 #include "Environment.h"
-#include "EventManager.h"
-#include "GlobalObjectManager.h"
+#include "../Event/EventManager.h"
+#include "../GlobalObject/GlobalObjectManager.h"
 
 #include "Event_SessionErased.h"
 #include "G_Possession.h"

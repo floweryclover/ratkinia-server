@@ -5,28 +5,27 @@
 #ifndef COMPONENTMANAGER_H
 #define COMPONENTMANAGER_H
 
+#include "Manager.h"
 #include "Entity.h"
 #include "SparseSet.h"
 #include "ErrorMacros.h"
 #include <memory>
 #include <vector>
 
-class ComponentManager final
+class ComponentManager final : public Manager
 {
 public:
-    explicit ComponentManager(std::vector<std::unique_ptr<RawSparseSet>> sparseSets)
-        : sparseSets_{std::move(sparseSets)}
-    {}
+    template<typename TComponent>
+    void RegisterComponent()
+    {
+        if (TComponent::GetRuntimeOrder() >= sparseSets_.size())
+        {
+            sparseSets_.resize(TComponent::GetRuntimeOrder() + 1);
+        }
 
-    ~ComponentManager() = default;
-
-    ComponentManager(const ComponentManager&) = delete;
-
-    ComponentManager(ComponentManager&&) = delete;
-
-    ComponentManager& operator=(const ComponentManager&) = delete;
-
-    ComponentManager& operator=(ComponentManager&&) = delete;
+        CRASH_COND_MSG(sparseSets_[TComponent::GetRuntimeOrder()] != nullptr, TComponent::GetComponentNameStatic());
+        sparseSets_[TComponent::GetRuntimeOrder()] = std::make_unique<SparseSet<TComponent>>();
+    }
 
     template<typename TComponent>
     TComponent* AttachComponentTo(const Entity entity)

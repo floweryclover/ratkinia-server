@@ -5,8 +5,8 @@
 #ifndef EVENTREGISTRAR_H
 #define EVENTREGISTRAR_H
 
-class Registrar;
+class EventManager;
 
-void RegisterEvents(Registrar& registrar);
+void RegisterEvents(EventManager& eventManager);
 
 #endif //EVENTREGISTRAR_H

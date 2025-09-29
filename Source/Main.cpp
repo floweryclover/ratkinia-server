@@ -2,12 +2,6 @@
 
 #include "MainServer.h"
 
-#include "Registrar.h"
-#include "ComponentRegistrar.h"
-#include "SystemRegistrar.h"
-#include "EventRegistrar.h"
-#include "GlobalObjectRegistrar.h"
-
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 #include <WinSock2.h>
@@ -26,15 +20,8 @@ int main()
         return 1;
     }
 
-    Registrar registrar;
-    RegisterComponents(registrar);
-    RegisterEvents(registrar);
-    RegisterSystems(registrar);
-    RegisterGlobalObjects(registrar);
-
     MainServer mainServer
     {
-        std::move(registrar),
         "127.0.0.1",
         31415,
         "postgresql://ratkinia_agent:1234@127.0.0.1:5432/ratkinia",

@@ -5,29 +5,22 @@
 #ifndef EVENTMANAGER_H
 #define EVENTMANAGER_H
 
+#include "Manager.h"
 #include "EventQueue.h"
 #include "ErrorMacros.h"
 #include "RuntimeOrder.h"
 #include <vector>
 #include <memory>
 
-class EventManager final
+class EventManager final : public Manager
 {
 public:
-    explicit EventManager(std::vector<std::unique_ptr<RawEventQueue>> eventQueues)
-        : eventQueues_{std::move(eventQueues)}
+    template<typename TEvent>
+    void Register()
     {
+        TEvent::SetRuntimeOrder(eventQueues_.size());
+        eventQueues_.emplace_back(std::make_unique<EventQueue<TEvent>>());
     }
-
-    ~EventManager() = default;
-
-    EventManager(const EventManager&) = delete;
-
-    EventManager(EventManager&&) = delete;
-
-    EventManager& operator=(const EventManager&) = delete;
-
-    EventManager& operator=(EventManager&&) = delete;
 
     void Clear()
     {

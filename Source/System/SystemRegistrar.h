@@ -5,8 +5,8 @@
 #ifndef SYSTEMREGISTRAR_H
 #define SYSTEMREGISTRAR_H
 
-class Registrar;
+class SystemManager;
 
-void RegisterSystems(Registrar& registrar);
+void RegisterSystems(SystemManager& systemManager);
 
 #endif //SYSTEMREGISTRAR_H
