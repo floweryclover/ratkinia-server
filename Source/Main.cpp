@@ -20,8 +20,9 @@ int main()
         return 1;
     }
 
-    MainServer mainServer
+    MainServer* mainServer = new MainServer
     {
+        std::thread::hardware_concurrency(),
         "127.0.0.1",
         31415,
         "postgresql://ratkinia_agent:1234@127.0.0.1:5432/ratkinia",
@@ -40,14 +41,15 @@ int main()
                 std::string command;
                 std::cin >> command;
 
-                mainServer.AddCommand(std::move(command));
+                delete mainServer;
+                mainServer->AddCommand(std::move(command));
             }
         }
     };
 
     try
     {
-        mainServer.Run();
+        mainServer->Run();
     }
     catch (const std::exception& e)
     {

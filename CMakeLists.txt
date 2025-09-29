@@ -1,9 +1,13 @@
 ﻿cmake_minimum_required(VERSION 3.26)
 project(RatkiniaServer)
 
+set(absl_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Thirdparty/Protobuf/lib/cmake/absl")
+set(utf8_range_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Thirdparty/Protobuf/lib/cmake/utf8_range")
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/Thirdparty")
 
+find_package(utf8_range CONFIG REQUIRED)
+find_package(absl CONFIG REQUIRED)
 find_package(protobuf CONFIG REQUIRED)
 find_package(OpenSSL CONFIG REQUIRED)
 find_package(libpqxx CONFIG REQUIRED)
@@ -17,6 +21,7 @@ add_executable(${PROJECT_NAME} ${SOURCE})
 target_include_directories(${PROJECT_NAME}
         PRIVATE
         "Source"
+        "Source/Actor"
         "Source/System"
         "Source/GlobalObject"
         "Source/Component"

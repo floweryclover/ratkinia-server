@@ -42,7 +42,7 @@ D_Accounts::CreateAccountResult D_Accounts::TryCreateAccount(const std::string& 
         id = result[0][0].as<uint64_t>();
     } catch (const integrity_constraint_violation& e)
     {
-        MessagePrinter::WriteErrorLine(e.what());
+        std::osyncstream{std::cout} << e.what() << std::endl;
         return CreateAccountResult::UnknownError;
     }
 

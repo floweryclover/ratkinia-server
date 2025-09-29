@@ -5,17 +5,24 @@
 #ifndef RATKINIASERVER_ERRORS_H
 #define RATKINIASERVER_ERRORS_H
 
-#include "MessagePrinter.h"
+#include <syncstream>
+#include <iostream>
 
 #define _STR(x) #x
 
 #define _MKSTR(x) _STR(x)
 
+template<typename... Args>
+void PrintImpl(Args... args)
+{
+    (std::osyncstream{std::cout} << ... << args) << std::endl;
+}
+
 #define ERR_PRINT(msg) \
-    MessagePrinter::WriteErrorLine("Function: ", __FUNCTION__, " at ", __FILE__, " line: ", __LINE__, ", Message: ", msg)
+    PrintImpl("Function: ", __FUNCTION__, " at ", __FILE__, " line: ",  __LINE__, ", Message: ", msg)
 
 #define ERR_PRINT_VARARGS(...)                                                                  \
-    MessagePrinter::WriteErrorLine("Function: ", __FUNCTION__, " at ", __FILE__, " line: ", __LINE__, " ", __VA_ARGS__)               \
+    PrintImpl("Function: ", __FUNCTION__, " at ", __FILE__, " line: ",  __LINE__, " ", __VA_ARGS__)
 
 #define ERR_FAIL_COND(cond)                                                                                                    \
     if (!!(cond))                                                                                                         \
@@ -102,7 +109,7 @@
         ERR_PRINT(msg); \
         std::abort();   \
     }   \
-    while (0)   \
+    while (0)
 
 #define CRASH_COND(cond)                                                                \
     if (!!(cond))                                                                       \

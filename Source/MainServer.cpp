@@ -3,26 +3,31 @@
 //
 
 #include "MainServer.h"
-
-#include "ComponentRegistrar.h"
-#include "DatabaseRegistrar.h"
-#include "SystemRegistrar.h"
-#include "EventRegistrar.h"
-#include "GlobalObjectRegistrar.h"
+#include "A_Auth.h"
 #include "NetworkServer.h"
-#include "Event_SessionErased.h"
-
+#include <syncstream>
 
 using namespace pqxx;
 
-MainServer::MainServer(const char* const listenAddress,
+MainServer::MainServer(const uint32_t mainWorkerThreadsCount,
+                       const char* const listenAddress,
                        const uint16_t listenPort,
                        const char* const dbHost,
                        const uint16_t acceptPoolSize,
                        const char* const certificateFile,
                        const char* const privateKeyFile)
-    : networkServer_
+    : WorkerThreadsCount{ mainWorkerThreadsCount },
+      networkServer_
       {
+          0,
+          [this](const uint32_t assosiatedActor,
+                 const uint32_t context,
+                 const uint16_t messageType,
+                 const uint16_t bodySize,
+                 const char* const body)
+          {
+              PushMessage(assosiatedActor, context, messageType, bodySize, body);
+          },
           listenAddress,
           listenPort,
           acceptPoolSize,
@@ -32,82 +37,91 @@ MainServer::MainServer(const char* const listenAddress,
       stub_{ environment_ },
       proxy_{ networkServer_ },
       databaseManager_{ dbHost },
-      environment_{ entityManager_, componentManager_, globalObjectManager_, eventManager_, databaseManager_, proxy_ }
+      environment_{ entityManager_, componentManager_, globalObjectManager_, eventManager_, databaseManager_, proxy_ },
+      newActorId_{ 1 },
+      workerThreadsWorkVersion_{ 0 },
+      mainThreadShouldWakeup_{ false },
+      workingThreadCount_{ WorkerThreadsCount }
 {
+    actorRunQueue_.emplace_back(actors_.emplace(0, std::make_unique<A_Auth>()).first->second.get());
+    for (int i = 1; i <= WorkerThreadsCount; ++i)
+    {
+        workerThreads_.emplace_back(&MainServer::WorkerThreadBody, this, i);
+    }
 }
+
+MainServer::~MainServer() = default;
 
 void MainServer::Run()
 {
-    RegisterComponents(componentManager_);
-    RegisterSystems(systemManager_);
-    RegisterEvents(eventManager_);
-    RegisterGlobalObjects(globalObjectManager_);
-    RegisterDatabases(databaseManager_);
-
-    for (const auto initializerSystem : systemManager_.InitializerSystems())
-    {
-        initializerSystem(environment_);
-    }
-
     while (true)
     {
-        eventManager_.Clear();
-
-        // 종료된 세션 정리 및 이벤트 발행
-        while (const auto erasedContext = networkServer_.TryClearClosedSession())
+        workingThreadCount_.store(WorkerThreadsCount, std::memory_order_relaxed);
+        workIndex_.store(0, std::memory_order_relaxed);
         {
-            eventManager_.Push<Event_SessionErased>(*erasedContext);
+            std::scoped_lock lock{ workerThreadsWorkVersionMutex_ };
+            ++workerThreadsWorkVersion_;
         }
-        networkServer_.PrepareAcceptPool();
+        workerThreadsWakeupConditionVariable_.notify_all();
 
-        // 세션 수신 데이터 처리
-        for (auto session : networkServer_.SessionReceiveBuffers())
         {
-            while (const auto message = session.TryPeek())
+            std::unique_lock lock{ mainThreadShouldWakeupMutex_ };
+            mainThreadWakeupConditionVariable_.wait(
+                lock,
+                [this]
+                {
+                    return mainThreadShouldWakeup_;
+                });
+            mainThreadShouldWakeup_ = false;
+        }
+
+
+        std::this_thread::sleep_for(std::chrono::milliseconds{ 16 });
+    }
+}
+
+void MainServer::PushMessage(const uint32_t assosiatedActor,
+                             const uint32_t context,
+                             const uint16_t messageType,
+                             const uint16_t bodySize,
+                             const char* const body)
+{
+    std::shared_lock lock{actorsMutex_};
+    CRASH_COND_MSG(!actors_.contains(assosiatedActor), assosiatedActor);
+    actors_.at(assosiatedActor)->PushMessage(context, messageType, bodySize, body);
+}
+
+void MainServer::WorkerThreadBody(const uint32_t)
+{
+    uint32_t desiredVersion = 1;
+    while (true)
+    {
+        {
+            std::unique_lock lock{ workerThreadsWorkVersionMutex_ };
+            workerThreadsWakeupConditionVariable_.wait(lock,
+                                                       [&]
+                                                       {
+                                                           return workerThreadsWorkVersion_ == desiredVersion;
+                                                       });
+        }
+
+        while (true)
+        {
+            const uint32_t workIndex = workIndex_.fetch_add(1, std::memory_order_relaxed);
+            if (workIndex >= actorRunQueue_.size())
             {
-                stub_.HandleCts(session.Context,
-                                message->MessageType,
-                                message->BodySize,
-                                message->Body);
-                session.Pop(RatkiniaProtocol::MessageHeaderSize + message->BodySize);
-            }
-        }
-
-        // 커맨드 처리
-        if (commandsMutex_.try_lock())
-        {
-            while (!commands_.empty())
-            {
-                std::vector<std::string> tokens;
-                std::string tokenInput;
-                std::stringstream ss{ commands_.front() };
-
-                while (ss >> tokenInput)
+                if (workingThreadCount_.fetch_sub(1, std::memory_order_relaxed) == 1)
                 {
-                    tokens.emplace_back(std::move(tokenInput));
+                    std::scoped_lock lock{ mainThreadShouldWakeupMutex_ };
+                    mainThreadShouldWakeup_ = true;
+                    mainThreadWakeupConditionVariable_.notify_one();
                 }
 
-                for (const auto& token : tokens)
-                {
-                    std::cout << token << std::endl;
-                }
-
-                if (!tokens.empty())
-                {
-                }
-
-                commands_.pop();
+                ++desiredVersion;
+                break;
             }
 
-            commandsMutex_.unlock();
+            actorRunQueue_[workIndex]->HandleAllMessages();
         }
-
-        // 메인 게임 로직
-        for (const auto system : systemManager_.Systems())
-        {
-            system(environment_);
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds{ 8 });
     }
 }

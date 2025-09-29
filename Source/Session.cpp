@@ -5,14 +5,16 @@
 #include "Session.h"
 #include "ErrorMacros.h"
 #include <openssl/err.h>
+#include <openssl/ssl.h>
 #include <WinSock2.h>
 #include <WS2tcpip.h>
-#include <mswsock.h>
-#include <openssl/ssl.h>
 
-Session::Session(const HANDLE iocp, const SOCKET socket, SSL* const ssl, const uint32_t context)
-    : Iocp{ iocp },
-      Context{ context },
+Session::Session(const SOCKET socket,
+                 SSL* const ssl,
+                 const uint32_t context,
+                 const uint32_t initialAssociatedActor)
+    : Context{ context },
+      AssociatedActor{ initialAssociatedActor },
       Socket{ socket },
       Ssl{ ssl },
       WriteBio{ BIO_new(BIO_s_mem()) },
@@ -22,149 +24,54 @@ Session::Session(const HANDLE iocp, const SOCKET socket, SSL* const ssl, const u
       ReceiveContiguousPopBuffer{ std::make_unique<char[]>(RatkiniaProtocol::MessageMaxSize) },
       SendTlsBuffer{ std::make_unique<char[]>(BufferCapacity) },
       SendAppBuffer{ std::make_unique<char[]>(BufferCapacity) },
-      SendContiguousPushBuffer{ std::make_unique<char[]>(RatkiniaProtocol::MessageMaxSize) }
+      SendContiguousPushBuffer{ std::make_unique<char[]>(RatkiniaProtocol::MessageMaxSize) },
+      ioContexts_{},
+      isIoOnline_{}
 {
     CRASH_COND(WriteBio == nullptr);
     CRASH_COND(ReadBio == nullptr);
 
-    ZeroMemory(&IOContext_Receive, sizeof(IOContext_Receive));
-    ZeroMemory(&IOContext_Send, sizeof(IOContext_Send));
+    ioContexts_[IoType_Send].IoType = IoType_Send;
+    ioContexts_[IoType_Receive].IoType = IoType_Receive;
 }
 
 Session::~Session()
 {
-    if (Socket != INVALID_SOCKET)
-    {
-        Close();
-    }
-}
-
-void Session::Close()
-{
-    if (const auto state = state_.load(std::memory_order_relaxed);
-        state != SessionState::PreAccept && state != SessionState::Ready)
-    {
-        return;
-    }
-
-    SSL_shutdown(Ssl);
     SSL_shutdown(Ssl);
     SSL_free(Ssl);
     shutdown(Socket, SD_BOTH);
     closesocket(Socket);
 
-    state_.store(SessionState::Closing, std::memory_order_release);
-
-    MessagePrinter::WriteLine("[접속 해제] ", address_);
-}
-
-bool Session::IsIoClear() const
-{
-    return !sendFlag_.load(std::memory_order_acquire) && !receiveFlag_.load(std::memory_order_acquire);
-}
-
-bool Session::TryPostAccept()
-{
-    if (SSL_accept(Ssl) != 1)
-    {
-        char buf[256];
-        ERR_PRINT_VARARGS("세션 ", Context, " SSL_accept() 에러: ", ERR_error_string(ERR_get_error(), buf));
-        return false;
-    }
-    SSL_set_bio(Ssl, ReadBio, WriteBio);
-
-    if (nullptr
-        == CreateIoCompletionPort(reinterpret_cast<HANDLE>(Socket),
-                                  Iocp,
-                                  reinterpret_cast<ULONG_PTR>(this),
-                                  0))
-    {
-        ERR_PRINT_VARARGS("생성한 ClientSocket의 IOCP 핸들로의 연결 작업에 실패했습니다:", GetLastError());
-        return false;
-    }
-
-    SOCKADDR_IN* localAddr;
-    SOCKADDR_IN* remoteAddr;
-    int localAddrLen;
-    int remoteAddrLen;
-
-    GetAcceptExSockaddrs(ReceiveTlsBuffer.get(),
-                         0,
-                         sizeof(SOCKADDR_IN) + 16,
-                         sizeof(SOCKADDR_IN) + 16,
-                         reinterpret_cast<sockaddr**>(&localAddr),
-                         &localAddrLen,
-                         reinterpret_cast<sockaddr**>(&remoteAddr),
-                         &remoteAddrLen);
-
-    char buf[INET_ADDRSTRLEN];
-    if (inet_ntop(AF_INET, &remoteAddr->sin_addr, buf, INET_ADDRSTRLEN))
-    {
-        address_ = buf;
-    }
-    else
-    {
-        address_ = "알 수 없음";
-    }
-    state_.store(SessionState::Ready, std::memory_order_release);
-    MessagePrinter::WriteLine("[접속] ", address_);
-
-    return true;
-}
-
-bool Session::TryAcceptAsync(SOCKET listenSocket, LPOVERLAPPED acceptOverlapped)
-{
-    if (FALSE
-        == AcceptEx(listenSocket,
-                    Socket,
-                    ReceiveTlsBuffer.get(),
-                    0,
-                    sizeof(SOCKADDR_IN) + 16,
-                    sizeof(SOCKADDR_IN) + 16,
-                    nullptr,
-                    acceptOverlapped))
-    {
-        const auto lastError = WSAGetLastError();
-        if (lastError != ERROR_IO_PENDING)
-        {
-            ERR_PRINT_VARARGS("AcceptEx() 호출 실패:", lastError);
-            return false;
-        }
-    }
-
-    return true;
+    std::osyncstream{ std::cout } << "[접속 해제] " << address_ << std::endl;
 }
 
 bool Session::TryReceiveAsync()
 {
-    if (state_.load(std::memory_order_acquire) != SessionState::Ready)
     {
-        return false;
+        std::scoped_lock lock{ ioOperationMutexes_[IoType_Receive] };
+        if (isIoOnline_[IoType_Receive] ||
+            shouldClose_.load(std::memory_order_relaxed))
+        {
+            return false;
+        }
+        isIoOnline_[IoType_Receive] = true;
     }
 
-    const size_t receiveEncryptedBufferSize = GetRingBufferSize(BufferCapacity,
-                                                                receiveTlsBufferHead_,
-                                                                receiveTlsBufferTail_);
-    if (receiveEncryptedBufferSize == BufferCapacity - 1)
-    {
-        return false;
-    }
+    const size_t loadedTail = receiveTlsBufferTail_.load(std::memory_order_relaxed);
+    const size_t loadedHead = receiveTlsBufferHead_.load(std::memory_order_acquire);
+    const size_t bufferSize = GetRingBufferSize(BufferCapacity, loadedHead, loadedTail);
+    const size_t writableSize = BufferCapacity - loadedTail;
 
-    const size_t writableSize = BufferCapacity - receiveTlsBufferTail_;
-    WSABUF wsabuf{};
-    wsabuf.buf = ReceiveTlsBuffer.get() + receiveTlsBufferTail_;
+    WSABUF wsabuf;
+    wsabuf.buf = ReceiveTlsBuffer.get() + loadedTail;
     wsabuf.len = writableSize;
 
-    IOContext_Receive.Type = IOType::Receive;
-
-    if (wsabuf.len == 0)
+    if (bufferSize == BufferCapacity - 1 ||
+        wsabuf.len == 0)
     {
+        std::scoped_lock lock{ ioOperationMutexes_[IoType_Receive] };
+        isIoOnline_[IoType_Receive] = false;
         return false;
-    }
-
-    if (receiveFlag_.exchange(true, std::memory_order_acq_rel))
-    {
-        return true;
     }
 
     DWORD dwFlags = 0;
@@ -174,56 +81,15 @@ bool Session::TryReceiveAsync()
                    1,
                    nullptr,
                    &dwFlags,
-                   reinterpret_cast<LPOVERLAPPED>(&IOContext_Receive),
+                   reinterpret_cast<LPOVERLAPPED>(&ioContexts_[IoType_Receive]),
                    nullptr))
     {
         if (const auto errorCode = WSAGetLastError();
             errorCode != WSA_IO_PENDING)
         {
-            receiveFlag_.store(false, std::memory_order_release);
+            std::scoped_lock lock{ ioOperationMutexes_[IoType_Receive] };
+            isIoOnline_[IoType_Receive] = false;
             ERR_PRINT_VARARGS("WSARecv() 호출 실패:", errorCode);
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool Session::TrySendAsync()
-{
-    if (state_.load(std::memory_order_acquire) != SessionState::Ready)
-    {
-        return false;
-    }
-
-    const size_t loadedHead = sendTlsBufferHead_.load(std::memory_order_relaxed);
-    const size_t loadedTail = sendTlsBufferTail_.load(std::memory_order_acquire);
-    WSABUF wsabuf{};
-    wsabuf.buf = SendTlsBuffer.get() + loadedHead;
-    wsabuf.len = loadedTail >= loadedHead
-                     ? loadedTail - loadedHead
-                     : BufferCapacity - loadedHead;
-
-    if (sendFlag_.exchange(true, std::memory_order_acq_rel))
-    {
-        return true;
-    }
-    IOContext_Send.Type = IOType::Send;
-
-    if (0
-        != WSASend(Socket,
-                   &wsabuf,
-                   1,
-                   nullptr,
-                   0,
-                   reinterpret_cast<LPOVERLAPPED>(&IOContext_Send),
-                   nullptr))
-    {
-        if (const auto errorCode = WSAGetLastError();
-            errorCode != WSA_IO_PENDING)
-        {
-            sendFlag_.store(false, std::memory_order_release);
-            ERR_PRINT_VARARGS("WSASend() 호출 실패:", errorCode);
             return false;
         }
     }
@@ -233,10 +99,15 @@ bool Session::TrySendAsync()
 
 bool Session::TryPostReceive(const size_t bytesTransferred)
 {
-    receiveFlag_.store(false, std::memory_order_relaxed);
+    {
+        std::scoped_lock lock{ ioOperationMutexes_[IoType_Receive] };
+        isIoOnline_[IoType_Receive] = false;
+    }
+
     receiveTlsBufferTail_.store(
         (receiveTlsBufferTail_.load(std::memory_order_relaxed) + bytesTransferred) % BufferCapacity,
         std::memory_order_release);
+
     while (true)
     {
         const auto receiveBuffersProcessResult = TryProcessReceiveBuffers();
@@ -264,8 +135,70 @@ bool Session::TryPostReceive(const size_t bytesTransferred)
     return true;
 }
 
+bool Session::TrySendAsync()
+{
+    {
+        std::scoped_lock lock{ ioOperationMutexes_[IoType_Send] };
+        if (isIoOnline_[IoType_Send])
+        {
+            return true;
+        }
+
+        if (shouldClose_.load(std::memory_order_relaxed))
+        {
+            return false;
+        }
+
+        isIoOnline_[IoType_Send] = true;
+    }
+
+    // TODO: 만약 이 시점에 종료 명령이 들어온다면? (CancelIoEx)
+
+    const size_t loadedHead = sendTlsBufferHead_.load(std::memory_order_relaxed);
+    const size_t loadedTail = sendTlsBufferTail_.load(std::memory_order_acquire);
+
+    WSABUF wsabuf;
+    wsabuf.buf = SendTlsBuffer.get() + loadedHead;
+    wsabuf.len = loadedTail >= loadedHead
+                     ? loadedTail - loadedHead
+                     : BufferCapacity - loadedHead;
+
+    if (wsabuf.len == 0)
+    {
+        std::scoped_lock lock{ ioOperationMutexes_[IoType_Send] };
+        isIoOnline_[IoType_Send] = false;
+        return false;
+    }
+
+    if (0
+        != WSASend(Socket,
+                   &wsabuf,
+                   1,
+                   nullptr,
+                   0,
+                   reinterpret_cast<LPOVERLAPPED>(&ioContexts_[IoType_Send]),
+                   nullptr))
+    {
+        if (const auto errorCode = WSAGetLastError();
+            errorCode != WSA_IO_PENDING)
+        {
+            std::scoped_lock lock{ ioOperationMutexes_[IoType_Send] };
+            isIoOnline_[IoType_Send] = false;
+            ERR_PRINT_VARARGS("WSASend() 호출 실패:", errorCode);
+            return false;
+        }
+    }
+
+    return true;
+}
+
 bool Session::TryPostSend(const size_t bytesTransferred)
 {
+    {
+        std::scoped_lock lock{ioOperationMutexes_[IoType_Send] };
+        isIoOnline_[IoType_Send] = false;
+    }
+
     sendTlsBufferHead_.store((sendTlsBufferHead_.load(std::memory_order_relaxed) + bytesTransferred) % BufferCapacity,
                              std::memory_order_release);
 
@@ -294,8 +227,23 @@ bool Session::TryPostSend(const size_t bytesTransferred)
         }
     }
 
-    sendFlag_.store(false, std::memory_order_relaxed);
     return true;
+}
+
+void Session::PostIoFailed(const uint8_t failedIoType)
+{
+    std::scoped_lock lock{ioOperationMutexes_[failedIoType]};
+    isIoOnline_[failedIoType] = false;
+}
+
+bool Session::Close()
+{
+    shouldClose_.store(true, std::memory_order_relaxed);
+    CRASH_COND_MSG(CancelIoEx(reinterpret_cast<HANDLE>(Socket), nullptr) == 0, GetLastError());
+
+    std::scoped_lock lock{ioOperationMutexes_[IoType_Send], ioOperationMutexes_[IoType_Receive], ioOperationMutexes_[IoType_Accept]};
+
+    return !isIoOnline_[IoType_Send] && !isIoOnline_[IoType_Receive] && !isIoOnline_[IoType_Accept];
 }
 
 std::optional<Session::MessagePeekResult> Session::TryPeekMessage()

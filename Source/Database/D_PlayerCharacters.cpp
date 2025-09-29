@@ -53,7 +53,7 @@ std::pair<D_PlayerCharacters::CreateCharacterResult, uint64_t> D_PlayerCharacter
         id = result[0][0].as<uint64_t>();
     } catch (const integrity_constraint_violation& e)
     {
-        MessagePrinter::WriteErrorLine(e.what());
+        std::osyncstream{std::cout} << e.what() << std::endl;
         return { CreateCharacterResult::UnknownError, 0 };
     }
 

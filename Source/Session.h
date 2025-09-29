@@ -8,37 +8,26 @@
 #include "ErrorMacros.h"
 #include "RatkiniaProtocol.gen.h"
 #include <memory>
-#include <string>
-#include <variant>
 #include <optional>
+#include <array>
 
-typedef void *HANDLE;
-typedef unsigned __int64 UINT_PTR, *PUINT_PTR;
-typedef UINT_PTR SOCKET;
-typedef struct ssl_st SSL;
-typedef struct ssl_ctx_st SSL_CTX;
-typedef struct bio_st BIO;
+struct ssl_st;
+struct ssl_ctx_st;
+struct bio_st;
 struct _OVERLAPPED;
+
+using UINT_PTR = unsigned __int64;
+using PUINT_PTR = UINT_PTR*;
+using SOCKET = UINT_PTR;
+using SSL = ssl_st;
+using SSL_CTX = ssl_ctx_st;
+using BIO = bio_st;
 using LPOVERLAPPED = _OVERLAPPED*;
 
-enum class SessionState : uint8_t
-{
-    PreAccept,
-    Ready,
-    Closing,
-};
-
-enum class IOType : uint8_t
-{
-    Send,
-    Receive,
-    Accept,
-};
-
-struct OverlappedEx final
+struct alignas(64) OverlappedEx
 {
     char RawOverlapped[32];
-    IOType Type;
+    uint8_t IoType;
 };
 
 inline uint16_t Htons(const uint16_t value)
@@ -86,7 +75,11 @@ inline std::optional<std::pair<size_t, size_t>> GetReadableSizes(const size_t bu
 
 class alignas(64) Session final
 {
-public:
+    enum class IoState : uint8_t
+    {
+        Online,
+    };
+
     enum class ReceiveBuffersProcessResult : uint8_t
     {
         Success,
@@ -110,59 +103,50 @@ public:
 
     static constexpr size_t BufferCapacity = RatkiniaProtocol::MessageMaxSize * 4;
 
+public:
+    constexpr static uint8_t IoType_Send = 0;
+    constexpr static uint8_t IoType_Receive = 1;
+
     const uint32_t Context;
 
-    OverlappedEx IOContext_Receive;
-    OverlappedEx IOContext_Send;
+    uint32_t AssociatedActor;
 
-    explicit Session(HANDLE iocp, SOCKET socket, SSL* ssl, uint32_t context);
+    explicit Session(SOCKET socket, SSL* ssl, uint32_t context, uint32_t initialAssociatedActor);
 
     ~Session();
 
-    void Close();
-
-    bool TryAcceptAsync(SOCKET listenSocket, LPOVERLAPPED acceptOverlapped);
-
-    bool TryPostAccept();
-
+    [[nodiscard]]
     bool TryReceiveAsync();
 
-    bool TrySendAsync();
-
-    bool IsIoClear() const;
-
+    [[nodiscard]]
     bool TryPostReceive(size_t bytesTransferred);
 
+    [[nodiscard]]
+    bool TrySendAsync();
+
+    [[nodiscard]]
     bool TryPostSend(size_t bytesTransferred);
 
-    void ReleaseReceiveFlag()
-    {
-        receiveFlag_.store(false, std::memory_order_release);
-    }
+    void PostIoFailed(uint8_t failedIoType);
+
+    bool Close();
 
     void Pop(const size_t size)
     {
-        receiveAppBufferHead_.store((receiveAppBufferHead_.load(std::memory_order_relaxed) + size) % BufferCapacity, std::memory_order_release);
+        receiveAppBufferHead_.store((receiveAppBufferHead_.load(std::memory_order_relaxed) + size) % BufferCapacity,
+                                    std::memory_order_release);
     }
 
     [[nodiscard]]
-    bool IsSendPending() const
-    {
-        return sendTlsBufferHead_.load(std::memory_order_relaxed) != sendTlsBufferTail_.load(std::memory_order_relaxed)
-               ||
-               sendAppBufferHead_.load(std::memory_order_relaxed) != sendAppBufferTail_.load(std::memory_order_relaxed);
-    }
-
     std::optional<MessagePeekResult> TryPeekMessage();
 
-    template<typename TMessage>
+    template <typename TMessage>
+    [[nodiscard]]
     bool TryPushMessage(uint16_t messageType, const TMessage& message);
 
 private:
-    const HANDLE Iocp;
     const SOCKET Socket;
     std::string address_;
-    std::atomic<SessionState> state_;
 
     SSL* const Ssl;
     BIO* const WriteBio;
@@ -177,18 +161,21 @@ private:
     const std::unique_ptr<char[]> SendAppBuffer;
     const std::unique_ptr<char[]> SendContiguousPushBuffer;
 
+    alignas(64) std::array<OverlappedEx, 2> ioContexts_;
+    alignas(64) std::array<bool, 2> isIoOnline_;
+    alignas(64) std::atomic_bool shouldClose_;
+    alignas(64) std::array<std::mutex, 2> ioOperationMutexes_;
+
     alignas(64) std::atomic<size_t> receiveTlsBufferHead_;
     alignas(64) std::atomic<size_t> receiveTlsBufferTail_;
     alignas(64) std::atomic<size_t> receiveAppBufferHead_;
     alignas(64) std::atomic<size_t> receiveAppBufferTail_;
-    alignas(64) std::atomic<bool> receiveFlag_;
     alignas(64) std::mutex receiveBuffersProcessMutex_;
 
     alignas(64) std::atomic<size_t> sendTlsBufferHead_;
     alignas(64) std::atomic<size_t> sendTlsBufferTail_;
     alignas(64) std::atomic<size_t> sendAppBufferHead_;
     alignas(64) std::atomic<size_t> sendAppBufferTail_;
-    alignas(64) std::atomic<bool> sendFlag_;
     alignas(64) std::mutex sendBuffersProcessMutex_;
 
     SendBuffersProcessResult TryProcessSendBuffers();
@@ -224,7 +211,7 @@ private:
     }
 };
 
-template<typename TMessage>
+template <typename TMessage>
 bool Session::TryPushMessage(const uint16_t messageType, const TMessage& message)
 {
     const size_t bodySize = message.ByteSizeLong();

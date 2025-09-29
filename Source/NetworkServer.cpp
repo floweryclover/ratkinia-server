@@ -3,23 +3,26 @@
 //
 
 #include "NetworkServer.h"
-#include "MessagePrinter.h"
 #include "ErrorMacros.h"
 #include <openssl/ssl.h>
 #include <WS2tcpip.h>
-#include <ranges>
+#include <mswsock.h>
 
-NetworkServer::NetworkServer(const char* const listenAddress,
+NetworkServer::NetworkServer(const uint32_t initialAssociatedActor,
+                             std::function<void(uint32_t, uint32_t, uint16_t, uint16_t, const char*)> pushMessage,
+                             const char* const listenAddress,
                              unsigned short listenPort,
                              const uint32_t acceptPoolSize,
                              const char* const sslCertificateFile,
                              const char* const sslPrivateKeyFile)
-    : Iocp{ CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0) },
-      ListenSocket{ socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) },
-      SslCtx{ SSL_CTX_new(TLS_server_method()) },
-      AcceptPoolSize{ acceptPoolSize },
-      newSessionId_{ 0 },
-      acceptContexts_{ std::make_unique<AcceptContext[]>(AcceptPoolSize) }
+    : InitialAssociatedActor{initialAssociatedActor},
+      PushMessage{std::move(pushMessage)},
+      Iocp{CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0)},
+      ListenSocket{socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)},
+      SslCtx{SSL_CTX_new(TLS_server_method())},
+      AcceptPoolSize{acceptPoolSize},
+      AcceptPool{std::make_unique<AcceptOverlappedEx[]>(AcceptPoolSize)},
+      newSessionId_{0}
 {
     CRASH_COND(Iocp == nullptr);
     CRASH_COND(ListenSocket == INVALID_SOCKET);
@@ -49,15 +52,6 @@ NetworkServer::NetworkServer(const char* const listenAddress,
                        sizeof(reuseAddr)),
                    WSAGetLastError());
 
-    int nodelay = 1;
-    CRASH_COND_MSG(SOCKET_ERROR == setsockopt(
-                       ListenSocket,
-                       IPPROTO_TCP,
-                       TCP_NODELAY,
-                       reinterpret_cast<char*>(&nodelay),
-                       sizeof(nodelay)),
-                   WSAGetLastError());
-
     CRASH_COND_MSG(SOCKET_ERROR == bind(
                        ListenSocket,
                        reinterpret_cast<sockaddr*>(&sockaddrIn),
@@ -73,117 +67,43 @@ NetworkServer::NetworkServer(const char* const listenAddress,
         workerThreads_.emplace_back(&NetworkServer::WorkerThreadBody, this, i);
     }
 
-    ZeroMemory(acceptContexts_.get(), sizeof(AcceptContext) * AcceptPoolSize);
-    PrepareAcceptPool();
+    for (int i = 0; i < AcceptPoolSize; ++i)
+    {
+        PrepareAcceptSlot(AcceptPool[i]);
+    }
 }
 
 NetworkServer::~NetworkServer()
 {
-    CRASH_COND(0 == PostQueuedCompletionStatus(Iocp, 0, 0, nullptr));
-
-    for (auto& workerThread : workerThreads_)
-    {
-        workerThread.join();
-    }
-
-    for (auto& session : sessions_ | std::views::values)
-    {
-        session.Close();
-    }
-
-    SSL_CTX_free(SslCtx);
-    closesocket(ListenSocket);
-    CloseHandle(Iocp);
+    CancelIoEx(reinterpret_cast<HANDLE>(ListenSocket), nullptr);
+    CRASH_NOW_MSG("Unimplemented");
 }
 
-std::optional<uint32_t> NetworkServer::TryClearClosedSession()
+// ReSharper disable once CppMemberFunctionMayBeConst
+void NetworkServer::PrepareAcceptSlot(AcceptOverlappedEx& slot)
 {
-    const auto contextToErase = [this]() -> std::optional<uint32_t>
-    {
-        std::lock_guard lock{ pendingSessionsToEraseMutex_ };
-        if (pendingSessionsToErase_.empty())
-        {
-            return std::nullopt;
-        }
+    slot.ClientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    CRASH_COND(slot.ClientSocket == INVALID_SOCKET);
 
-        const uint32_t context = pendingSessionsToErase_.back();
-        pendingSessionsToErase_.pop_back();
-        return context;
-    }();
-    if (!contextToErase)
-    {
-        return std::nullopt;
-    }
+    slot.IoType = AcceptOverlappedEx::IoType_Accept;
 
-    auto& session = sessions_.at(*contextToErase);
-
-    const int eraseIndex = [&]
-    {
-        int index;
-        for (index = 0; index < sessionArray_.size(); ++index)
-        {
-            if (sessionArray_[index] == &session)
-            {
-                break;
-            }
-        }
-        return index;
-    }();
-
-    CRASH_COND(eraseIndex == sessionArray_.size());
-
-    sessionArray_[eraseIndex] = sessionArray_.back();
-    sessionArray_.pop_back();
-
-    sessions_.erase(*contextToErase);
-    return *contextToErase;
-}
-
-void NetworkServer::PrepareAcceptPool()
-{
-    while (acceptingSessionsCount_.load(std::memory_order_relaxed) < AcceptPoolSize)
-    {
-        while (sessions_.contains(newSessionId_))
-        {
-            newSessionId_ += 1;
-        }
-
-        AcceptContext* availableAcceptContext = nullptr;
-        for (int i = 0; i < AcceptPoolSize; ++i)
-        {
-            if (acceptContexts_[i].Session == nullptr)
-            {
-                availableAcceptContext = &acceptContexts_[i];
-                break;
-            }
-        }
-
-        CRASH_COND(availableAcceptContext == nullptr);
-        ZeroMemory(availableAcceptContext, sizeof(AcceptContext));
-        availableAcceptContext->Context.Type = IOType::Accept;
-
-        const auto newClientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-        CRASH_COND(newClientSocket == INVALID_SOCKET);
-
-        const auto ssl = SSL_new(SslCtx);
-        CRASH_COND(ssl == nullptr);
-        CRASH_COND(1 != SSL_set_fd(ssl, newClientSocket));
-
-        auto [iter, result] = sessions_.emplace(std::piecewise_construct,
-                                                std::forward_as_tuple(newSessionId_),
-                                                std::forward_as_tuple(Iocp, newClientSocket, ssl, newSessionId_));
-        auto& session = iter->second;
-        availableAcceptContext->Session = &session;
-        sessionArray_.push_back(&session);
-
-        CRASH_COND(!session.TryAcceptAsync(ListenSocket, reinterpret_cast<LPOVERLAPPED>(availableAcceptContext)));
-        acceptingSessionsCount_.fetch_add(1, std::memory_order_relaxed);
-    }
+    const auto ssl = SSL_new(SslCtx);
+    CRASH_COND(ssl == nullptr);
+    CRASH_COND(1 != SSL_set_fd(ssl, slot.ClientSocket));
+    CRASH_COND_MSG(AcceptEx(ListenSocket,
+                slot.ClientSocket,
+                slot.AddressBuffer,
+                0,
+                sizeof(SOCKADDR_IN) + 16,
+                sizeof(SOCKADDR_IN) + 16,
+                nullptr,
+                reinterpret_cast<LPOVERLAPPED>(&slot)) == FALSE &&
+                GetLastError() != ERROR_IO_PENDING, GetLastError());
 }
 
 void NetworkServer::WorkerThreadBody(const int threadId)
 {
-    MessagePrinter::WriteLine("IOCP 워커 스레드 ", threadId, " 시작");
+    std::osyncstream{std::cout} << "IOCP 워커 스레드 " << threadId << " 시작" << std::endl;
     while (true)
     {
         DWORD bytesTransferred = 0;
@@ -196,92 +116,173 @@ void NetworkServer::WorkerThreadBody(const int threadId)
                                                        INFINITE);
         if (completionKey == 0) // 종료 명령
         {
+            CRASH_COND_MSG(PostQueuedCompletionStatus(Iocp, 0, 0, nullptr) == FALSE, GetLastError());
             break;
+        }
+
+        CRASH_COND_MSG(overlapped == nullptr, GetLastError());
+        const uint8_t ioType = reinterpret_cast<AcceptOverlappedEx*>(overlapped)->IoType;
+        if (ioType == AcceptOverlappedEx::IoType_Accept)
+        {
+            if (success)
+            {
+
+            }
+            else
+            {
+
+            }
+            continue;
         }
 
         if (!success)
         {
-            const OverlappedEx& context = *reinterpret_cast<OverlappedEx*>(overlapped);
-            CRASH_COND(context.Type == IOType::Accept);
-
-            Session& session{ *reinterpret_cast<Session*>(completionKey) };
-            if (context.Type == IOType::Receive)
+            const OverlappedEx& overlappedEx = *reinterpret_cast<OverlappedEx*>(overlapped);
+            Session& session = *reinterpret_cast<Session*>(completionKey);
+            const uint32_t context = session.Context;
+            if (overlappedEx.IoType == Session::IoType_Send)
             {
                 if (GetLastError() != ERROR_NETNAME_DELETED)
                 {
-                    ERR_PRINT_VARARGS("세션", session.Context, "수신 에러:", GetLastError());
+                    ERR_PRINT_VARARGS("세션 ", session.Context, " 송신 에러: ", GetLastError());
                 }
-                PostReceive(session, 0);
             }
-            else
+            else if (overlappedEx.IoType == Session::IoType_Receive)
             {
                 if (GetLastError() != ERROR_NETNAME_DELETED)
                 {
-                    ERR_PRINT_VARARGS("세션", session.Context, "송신 에러:", GetLastError());
+                    ERR_PRINT_VARARGS("세션 ", session.Context, " 수신 에러: ", GetLastError());
                 }
-                PostSend(session, 0);
             }
-            CloseSession(session);
+            else // TODO: Accept는 CompletionKey가 Session이 아님
+            {
+                ERR_PRINT_VARARGS("세션 ", session.Context, " 연결 수립 에러: ", GetLastError());
+            }
+            session.PostIoFailed(overlappedEx.IoType);
+            SessionCleanupRoutine(context);
             continue;
         }
 
+        Session& session = *reinterpret_cast<Session*>(completionKey);
         const OverlappedEx& context = *reinterpret_cast<OverlappedEx*>(overlapped);
-        if (context.Type == IOType::Accept)
+        if (context.IoType == Session::IoType_Accept)
         {
-            {
-                auto& acceptContext = *reinterpret_cast<AcceptContext*>(reinterpret_cast<size_t>(overlapped));
-                PostAccept(*acceptContext.Session);
-                acceptContext.Session = nullptr;
-            }
+            PostAccept(session);
         }
-        else if (context.Type == IOType::Receive)
+        else if (context.IoType == Session::IoType_Receive)
         {
-            PostReceive(*reinterpret_cast<Session*>(completionKey), bytesTransferred);
+            // TODO: WSARecv()를 호출해야 0(FIN)패킷이 받아지는지
+            PostReceive(session, bytesTransferred);
         }
         else
         {
-            PostSend(*reinterpret_cast<Session*>(completionKey), bytesTransferred);
+            PostSend(session, bytesTransferred);
         }
     }
-    MessagePrinter::WriteLine("IOCP 워커 스레드 ", threadId, " 종료");
+    std::osyncstream{std::cout} << "IOCP 워커 스레드 " << threadId << " 종료" << std::endl;
 }
 
-void NetworkServer::PostAccept(Session& session)
+void NetworkServer::PostAccept(AcceptOverlappedEx& slot)
 {
-    if (!session.TryPostAccept() ||
-        !session.TryReceiveAsync())
+    int noDelay = 1;
+    CRASH_COND_MSG(SOCKET_ERROR == setsockopt(
+                       Socket,
+                       IPPROTO_TCP,
+                       TCP_NODELAY,
+                       reinterpret_cast<char*>(&noDelay),
+                       sizeof(noDelay)),
+                   WSAGetLastError());
+
+    if (SSL_accept(Ssl) != 1)
     {
-        CloseSession(session);
+        char buf[256];
+        ERR_PRINT_VARARGS("세션 ", Context, " SSL_accept() 에러: ", ERR_error_string(ERR_get_error(), buf));
+        return false;
+    }
+    SSL_set_bio(Ssl, ReadBio, WriteBio);
+
+    if (nullptr
+        == CreateIoCompletionPort(reinterpret_cast<HANDLE>(Socket),
+                                  Iocp,
+                                  reinterpret_cast<ULONG_PTR>(this),
+                                  0))
+    {
+        ERR_PRINT_VARARGS("생성한 ClientSocket의 IOCP 핸들로의 연결 작업에 실패했습니다:", GetLastError());
+        return false;
     }
 
-    acceptingSessionsCount_.fetch_sub(1, std::memory_order_relaxed);
+    SOCKADDR_IN* localAddr;
+    SOCKADDR_IN* remoteAddr;
+    int localAddrLen;
+    int remoteAddrLen;
+
+    GetAcceptExSockaddrs(ReceiveTlsBuffer.get(),
+                         0,
+                         sizeof(SOCKADDR_IN) + 16,
+                         sizeof(SOCKADDR_IN) + 16,
+                         reinterpret_cast<sockaddr**>(&localAddr),
+                         &localAddrLen,
+                         reinterpret_cast<sockaddr**>(&remoteAddr),
+                         &remoteAddrLen);
+
+    char buf[INET_ADDRSTRLEN];
+    if (inet_ntop(AF_INET, &remoteAddr->sin_addr, buf, INET_ADDRSTRLEN))
+    {
+        address_ = buf;
+    }
+    else
+    {
+        address_ = "알 수 없음";
+    }
 }
 
 void NetworkServer::PostReceive(Session& session, const size_t bytesTransferred)
 {
-    if (!session.TryPostReceive(bytesTransferred) ||
-        bytesTransferred == 0 ||
-        !session.TryReceiveAsync())
+    const uint32_t context = session.Context;
+    const bool succeeded = [&]
     {
-        CloseSession(session);
+        std::shared_lock lock{sessionsMutex_};
+        return session.TryPostReceive(bytesTransferred) &&
+            bytesTransferred > 0 &&
+            session.TryReceiveAsync();
+    }();
+
+    if (!succeeded)
+    {
+        SessionCleanupRoutine(context);
     }
+
+    /// TODO Push to MPSC queue
 }
 
 void NetworkServer::PostSend(Session& session, const size_t bytesTransferred)
 {
-    if (!session.TryPostSend(bytesTransferred) ||
-        session.IsSendPending() && !session.TrySendAsync())
+    const uint32_t context = session.Context;
+    const bool succeeded = [&]
     {
-        CloseSession(session);
+        std::shared_lock lock{sessionsMutex_};
+        return session.TryPostSend(bytesTransferred) &&
+            session.TrySendAsync();
+    }();
+
+    if (!succeeded)
+    {
+        SessionCleanupRoutine(context);
     }
 }
 
-void NetworkServer::CloseSession(Session& session)
+void NetworkServer::SessionCleanupRoutine(const uint32_t context)
 {
-    session.Close();
-    if (session.IsIoClear())
+    if (std::shared_lock lock{sessionsMutex_};
+        !sessions_.contains(context) ||
+        !sessions_.at(context)->Close())
     {
-        std::lock_guard lock{ pendingSessionsToEraseMutex_ };
-        pendingSessionsToErase_.emplace_back(session.Context);
+        return;
+    }
+
+    if (std::unique_lock lock{sessionsMutex_};
+        sessions_.contains(context))
+    {
+        sessions_.erase(context);
     }
 }

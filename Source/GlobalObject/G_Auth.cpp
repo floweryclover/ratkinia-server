@@ -3,7 +3,6 @@
 //
 
 #include "G_Auth.h"
-#include "MessagePrinter.h"
 
 G_Auth::G_Auth()
     : authThread_{ &G_Auth::AuthBackgroundThreadBody, this }
@@ -52,7 +51,7 @@ void G_Auth::DeauthenticateByPlayerId(const uint64_t id)
 
 void G_Auth::AuthBackgroundThreadBody()
 {
-    MessagePrinter::WriteLine("G_Auth 백그라운드 스레드 시작");
+    std::osyncstream{std::cout} << "G_Auth 백그라운드 스레드 시작" << std::endl;
     while (!shouldAuthThreadStop_.load(std::memory_order_relaxed))
     {
         while (true)
@@ -91,5 +90,5 @@ void G_Auth::AuthBackgroundThreadBody()
             }
         }
     }
-    MessagePrinter::WriteLine("G_Auth 백그라운드 스레드 종료");
+    std::osyncstream{std::cout} << "G_Auth 백그라운드 스레드 종료" << std::endl;
 }

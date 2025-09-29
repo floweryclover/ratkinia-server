@@ -5,17 +5,28 @@
 #ifndef NETWORKSERVER_H
 #define NETWORKSERVER_H
 
-#include "SessionReceiveBuffersView.h"
 #include "Session.h"
+#include <absl/container/flat_hash_map.h>
+#include <functional>
 #include <thread>
 #include <vector>
 #include <memory>
-#include <unordered_map>
+#include <shared_mutex>
 
-class NetworkServer final
+using HANDLE = void*;
+
+class alignas(64) NetworkServer final
 {
+    struct alignas(64) AcceptOverlappedEx final : OverlappedEx
+    {
+        char AddressBuffer[64];
+        SOCKET ClientSocket;
+    };
+
 public:
-    explicit NetworkServer(const char* listenAddress,
+    explicit NetworkServer(uint32_t initialAssociatedActor,
+                           std::function<void(uint32_t, uint32_t, uint16_t, uint16_t, const char*)> pushMessage,
+                           const char* listenAddress,
                            unsigned short listenPort,
                            uint32_t acceptPoolSize,
                            const char* sslCertificateFile,
@@ -31,16 +42,6 @@ public:
 
     NetworkServer& operator=(NetworkServer&&) = delete;
 
-    std::optional<uint32_t> TryClearClosedSession();
-
-    void PrepareAcceptPool();
-
-    [[nodiscard]]
-    SessionReceiveBuffersView SessionReceiveBuffers()
-    {
-        return SessionReceiveBuffersView{sessions_};
-    }
-
     template<typename TMessage>
     void SendMessage(const uint32_t context, const uint16_t messageType, TMessage&& message)
     {
@@ -49,49 +50,34 @@ public:
             return;
         }
 
-        Session& session = sessions_.at(context);
+        Session& session = *sessions_.at(context);
 
         if (!session.TryPushMessage(messageType, std::forward<TMessage>(message))
             || !session.TrySendAsync())
         {
-            CloseSession(session);
+            SessionCleanupRoutine(context);
         }
-    }
-
-    [[nodiscard]]
-    // ReSharper disable once CppMemberFunctionMayBeConst
-    std::optional<SessionReceiveBufferOnlyWrapper> GetSessionReceiveBufferByWorkIndex(const uint32_t workIndex)
-    {
-        if (workIndex >= sessions_.size())
-        {
-            return std::nullopt;
-        }
-
-        return SessionReceiveBufferOnlyWrapper{*sessionArray_[workIndex]};
     }
 
 private:
-    struct AcceptContext final
-    {
-        OverlappedEx Context;
-        Session* Session;
-    };
+    const uint32_t InitialAssociatedActor;
+    const std::function<void(uint32_t, uint32_t, uint16_t, uint16_t, const char*)> PushMessage;
 
     const HANDLE Iocp;
     const SOCKET ListenSocket;
     SSL_CTX* const SslCtx;
-    const uint32_t AcceptPoolSize;
-    std::atomic_uint32_t acceptingSessionsCount_;
 
-    uint32_t newSessionId_;
-    std::unordered_map<uint32_t, Session> sessions_;
-    std::vector<Session*> sessionArray_;
-    std::unique_ptr<AcceptContext[]> acceptContexts_;
+    const uint32_t AcceptPoolSize;
+    const std::unique_ptr<AcceptOverlappedEx[]> AcceptPool;
+
+    alignas(64) std::atomic_uint32_t newSessionId_;
+
+    std::shared_mutex sessionsMutex_;
+    absl::flat_hash_map<uint32_t, std::unique_ptr<Session>> sessions_;
 
     std::vector<std::thread> workerThreads_;
 
-    std::mutex pendingSessionsToEraseMutex_;
-    std::vector<uint32_t> pendingSessionsToErase_;
+    void PrepareAcceptSlot(AcceptOverlappedEx& slot);
 
     void WorkerThreadBody(int threadId);
 
@@ -101,7 +87,7 @@ private:
 
     void PostSend(Session& session, size_t bytesTransferred);
 
-    void CloseSession(Session& session);
+    void SessionCleanupRoutine(uint32_t context);
 };
 
 #endif //NETWORKSERVER_H
