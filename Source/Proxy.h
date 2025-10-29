@@ -18,7 +18,7 @@ public:
     template<typename TMessage>
     void WriteMessage(const uint64_t context, const RatkiniaProtocol::StcMessageType messageType, const TMessage& message)
     {
-        networkServer_.SendMessage(context, static_cast<uint16_t>(messageType), message);
+        //networkServer_.SendMessage(context, static_cast<uint16_t>(messageType), message);
     }
 
 private:

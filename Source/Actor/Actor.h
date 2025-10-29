@@ -5,9 +5,12 @@
 #ifndef ACTOR_H
 #define ACTOR_H
 
-#include <absl/synchronization/mutex.h>
 #include <variant>
 #include <queue>
+#include <mutex>
+#include <array>
+#include <iostream>
+#include <syncstream>
 
 class Actor
 {
@@ -35,7 +38,7 @@ public:
     {
         if (bodySize <= 256)
         {
-            absl::MutexLock lock{&pushMutex_};
+            std::scoped_lock lock{pushMutex_};
             auto& message = messageQueue_[pushIndex_].emplace();
             message.Context = context;
             message.MessageType = messageType;
@@ -47,41 +50,41 @@ public:
             auto largeBody = std::make_unique<char[]>(bodySize);
             memcpy(largeBody.get(), body, bodySize);
 
-            absl::MutexLock lock{&pushMutex_};
-            auto& message = messageQueue_[pushIndex_].emplace(context, messageType, bodySize, std::move(largeBody));
+            std::scoped_lock lock{pushMutex_};
+            messageQueue_[pushIndex_].emplace(context, messageType, bodySize, std::move(largeBody));
         }
     }
 
     void HandleAllMessages()
     {
-        // while (true)
-        // {
-        //     if (messageQueue_[1 - pushIndex_].empty())
-        //     {
-        //         absl::MutexLock lock{&pushMutex_};
-        //         pushIndex_ = 1 - pushIndex_;
-        //     }
-        //
-        //     if (messageQueue_[1 - pushIndex_].empty())
-        //     {
-        //         return;
-        //     }
-        //
-        //     const auto& [context, messageType, bodySize, body] = messageQueue_[1 - pushIndex_].front();
-        //     OnHandleMessage(
-        //         context,
-        //         messageType,
-        //         bodySize,
-        //         std::holds_alternative<std::array<char, 256>>(body) ? std::get<std::array<char, 256>>(body) : std::get<std::unique_ptr<char[]>>(body).get());
-        //     messageQueue_[1 - pushIndex_].pop();
-        // }
+        while (true)
+        {
+            if (messageQueue_[1 - pushIndex_].empty())
+            {
+                std::scoped_lock lock{pushMutex_};
+                pushIndex_ = 1 - pushIndex_;
+            }
+
+            if (messageQueue_[1 - pushIndex_].empty())
+            {
+                return;
+            }
+
+            const auto& [context, messageType, bodySize, body] = messageQueue_[1 - pushIndex_].front();
+            OnHandleMessage(
+                context,
+                messageType,
+                bodySize,
+                std::holds_alternative<std::array<char, 256>>(body) ? std::get<std::array<char, 256>>(body).data() : std::get<std::unique_ptr<char[]>>(body).get());
+            messageQueue_[1 - pushIndex_].pop();
+        }
     }
 
 protected:
     virtual void OnHandleMessage(uint32_t context, uint16_t messageType, uint16_t bodySize, const char* body) = 0;
 
 private:
-    absl::Mutex pushMutex_;
+    std::mutex pushMutex_;
     int pushIndex_;
     std::queue<Message> messageQueue_[2];
 };

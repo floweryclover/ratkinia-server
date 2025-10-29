@@ -221,3 +221,7 @@ void Stub::OnSelectCharacter(const uint32_t context, const uint64_t id)
             data.mutable_component_variant()->mutable_human_like_body()->set_static_mesh_name(cnt % 2 ? "Normal" : "Cube");
         });
 }
+
+void Stub::OnDummyRequest(const uint32_t context, const std::string& message)
+{
+}

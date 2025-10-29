@@ -6,6 +6,7 @@
 #define RATKINIASERVER_SESSION_H
 
 #include "ErrorMacros.h"
+#include "OverlappedEx.h"
 #include "RatkiniaProtocol.gen.h"
 #include <memory>
 #include <optional>
@@ -23,12 +24,6 @@ using SSL = ssl_st;
 using SSL_CTX = ssl_ctx_st;
 using BIO = bio_st;
 using LPOVERLAPPED = _OVERLAPPED*;
-
-struct alignas(64) OverlappedEx
-{
-    char RawOverlapped[32];
-    uint8_t IoType;
-};
 
 inline uint16_t Htons(const uint16_t value)
 {
@@ -111,7 +106,7 @@ public:
 
     uint32_t AssociatedActor;
 
-    explicit Session(SOCKET socket, SSL* ssl, uint32_t context, uint32_t initialAssociatedActor);
+    explicit Session(SOCKET socket, std::string address, SSL* ssl, uint32_t context, uint32_t initialAssociatedActor);
 
     ~Session();
 
@@ -146,7 +141,7 @@ public:
 
 private:
     const SOCKET Socket;
-    std::string address_;
+    const std::string Address;
 
     SSL* const Ssl;
     BIO* const WriteBio;
@@ -209,6 +204,8 @@ private:
                                  sendAppBufferHead_.load(std::memory_order_relaxed),
                                  sendAppBufferTail_.load(std::memory_order_relaxed));
     }
+
+    void Cleanup();
 };
 
 template <typename TMessage>

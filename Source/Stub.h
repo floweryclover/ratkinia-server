@@ -34,6 +34,8 @@ public:
 
     void OnSelectCharacter(uint32_t context, uint64_t id) override;
 
+    void OnDummyRequest(const uint32_t context, const std::string& message) override;
+
 private:
     MutableEnvironment& environment_;
 };

@@ -12,7 +12,6 @@ class A_Auth final : public Actor
 protected:
     void OnHandleMessage(uint32_t context, uint16_t messageType, uint16_t bodySize, const char* body) override
     {
-
     }
 };
 

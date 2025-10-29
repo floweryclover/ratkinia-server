@@ -10,12 +10,14 @@
 #include <WS2tcpip.h>
 
 Session::Session(const SOCKET socket,
+                 std::string address,
                  SSL* const ssl,
                  const uint32_t context,
                  const uint32_t initialAssociatedActor)
     : Context{ context },
       AssociatedActor{ initialAssociatedActor },
       Socket{ socket },
+      Address{ std::move(address) },
       Ssl{ ssl },
       WriteBio{ BIO_new(BIO_s_mem()) },
       ReadBio{ BIO_new(BIO_s_mem()) },
@@ -31,18 +33,18 @@ Session::Session(const SOCKET socket,
     CRASH_COND(WriteBio == nullptr);
     CRASH_COND(ReadBio == nullptr);
 
-    ioContexts_[IoType_Send].IoType = IoType_Send;
-    ioContexts_[IoType_Receive].IoType = IoType_Receive;
+    SSL_set_bio(Ssl, ReadBio, WriteBio);
+
+    ioContexts_[IoType_Send].Data.emplace<OverlappedEx::IoData>(IoType_Send, this);
+    ioContexts_[IoType_Receive].Data.emplace<OverlappedEx::IoData>(IoType_Receive, this);
+
+    std::osyncstream{ std::cout } << "[접속] " << Address << std::endl;
 }
 
 Session::~Session()
 {
-    SSL_shutdown(Ssl);
-    SSL_free(Ssl);
-    shutdown(Socket, SD_BOTH);
-    closesocket(Socket);
-
-    std::osyncstream{ std::cout } << "[접속 해제] " << address_ << std::endl;
+    Cleanup();
+    std::osyncstream{ std::cout } << "[접속 해제] " << Address << std::endl;
 }
 
 bool Session::TryReceiveAsync()
@@ -152,8 +154,6 @@ bool Session::TrySendAsync()
         isIoOnline_[IoType_Send] = true;
     }
 
-    // TODO: 만약 이 시점에 종료 명령이 들어온다면? (CancelIoEx)
-
     const size_t loadedHead = sendTlsBufferHead_.load(std::memory_order_relaxed);
     const size_t loadedTail = sendTlsBufferTail_.load(std::memory_order_acquire);
 
@@ -195,7 +195,7 @@ bool Session::TrySendAsync()
 bool Session::TryPostSend(const size_t bytesTransferred)
 {
     {
-        std::scoped_lock lock{ioOperationMutexes_[IoType_Send] };
+        std::scoped_lock lock{ ioOperationMutexes_[IoType_Send] };
         isIoOnline_[IoType_Send] = false;
     }
 
@@ -232,18 +232,16 @@ bool Session::TryPostSend(const size_t bytesTransferred)
 
 void Session::PostIoFailed(const uint8_t failedIoType)
 {
-    std::scoped_lock lock{ioOperationMutexes_[failedIoType]};
+    std::scoped_lock lock{ ioOperationMutexes_[failedIoType] };
     isIoOnline_[failedIoType] = false;
 }
 
 bool Session::Close()
 {
-    shouldClose_.store(true, std::memory_order_relaxed);
-    CRASH_COND_MSG(CancelIoEx(reinterpret_cast<HANDLE>(Socket), nullptr) == 0, GetLastError());
+    Cleanup();
 
-    std::scoped_lock lock{ioOperationMutexes_[IoType_Send], ioOperationMutexes_[IoType_Receive], ioOperationMutexes_[IoType_Accept]};
-
-    return !isIoOnline_[IoType_Send] && !isIoOnline_[IoType_Receive] && !isIoOnline_[IoType_Accept];
+    std::scoped_lock lock{ ioOperationMutexes_[IoType_Send], ioOperationMutexes_[IoType_Receive] };
+    return !isIoOnline_[IoType_Send] && !isIoOnline_[IoType_Receive];
 }
 
 std::optional<Session::MessagePeekResult> Session::TryPeekMessage()
@@ -307,7 +305,7 @@ std::optional<Session::MessagePeekResult> Session::TryPeekMessage()
 
 Session::ReceiveBuffersProcessResult Session::TryProcessReceiveBuffers()
 {
-    std::lock_guard receiveBuffersProcessLock{ receiveBuffersProcessMutex_ };
+    std::scoped_lock receiveBuffersProcessLock{ receiveBuffersProcessMutex_ };
 
     bool wantSend = false;
     {
@@ -328,7 +326,7 @@ Session::ReceiveBuffersProcessResult Session::TryProcessReceiveBuffers()
             }
 
             {
-                std::lock_guard lock{ sslMutex_ };
+                std::scoped_lock lock{ sslMutex_ };
                 CRASH_COND(
                     decryptableSize != BIO_write(ReadBio, ReceiveTlsBuffer.get() + adjustedHead, decryptableSize));
             }
@@ -345,7 +343,7 @@ Session::ReceiveBuffersProcessResult Session::TryProcessReceiveBuffers()
     {
         // Read Bio -> Receive App Buffer
         const size_t loadedTail = receiveAppBufferTail_.load(std::memory_order_relaxed);
-        const size_t loadedHead = receiveAppBufferHead_.load(std::memory_order_acquire);
+        const size_t loadedHead = receiveAppBufferHead_.load(std::memory_order_relaxed);
         const size_t size = loadedHead <= loadedTail
                                 ? loadedTail - loadedHead
                                 : BufferCapacity - loadedHead + loadedTail;
@@ -397,6 +395,22 @@ Session::ReceiveBuffersProcessResult Session::TryProcessReceiveBuffers()
     } // Read Bio -> Receive App Buffer
 
     return wantSend ? ReceiveBuffersProcessResult::WantProcessSendBuffers : ReceiveBuffersProcessResult::Success;
+}
+
+void Session::Cleanup()
+{
+    if (shouldClose_.exchange(true, std::memory_order_relaxed))
+    {
+        return;
+    }
+
+    {
+        std::scoped_lock lock{ sslMutex_ };
+        SSL_shutdown(Ssl);
+        SSL_free(Ssl);
+    }
+    shutdown(Socket, SD_BOTH);
+    closesocket(Socket);
 }
 
 Session::SendBuffersProcessResult Session::TryProcessSendBuffers()
