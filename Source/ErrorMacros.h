@@ -103,6 +103,13 @@ void PrintImpl(Args... args)
     } else                                                                                                                      \
         ((void)0)
 
+#define CRASH_NOW() \
+    do  \
+    {   \
+        std::abort();   \
+    }   \
+    while (0)
+
 #define CRASH_NOW_MSG(msg) \
     do  \
     {   \
