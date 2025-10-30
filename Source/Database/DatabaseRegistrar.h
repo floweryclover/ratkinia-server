@@ -1,12 +1,12 @@
 //
-// Created by floweryclover on 2025-09-30.
+// Created by floweryclover on 2025-10-30.
 //
 
-#ifndef DATABASETABLEREGISTRAR_H
-#define DATABASETABLEREGISTRAR_H
+#ifndef DATABASEREGISTRAR_H
+#define DATABASEREGISTRAR_H
 
-class DatabaseManager;
+class DatabaseServer;
 
-void RegisterDatabases(DatabaseManager& databaseManager);
+void RegisterDatabase(DatabaseServer& databaseServer);
 
-#endif //DATABASETABLEREGISTRAR_H
+#endif //DATABASEREGISTRAR_H

@@ -5,88 +5,109 @@
 #ifndef ACTOR_H
 #define ACTOR_H
 
-#include <variant>
-#include <queue>
+#include "Message.h"
+#include <absl/container/flat_hash_map.h>
+#include <vector>
 #include <mutex>
-#include <array>
-#include <iostream>
-#include <syncstream>
 
-class Actor
+class Proxy;
+class DatabaseServer;
+
+struct ActorInitializer final
 {
-    struct Message
+    std::reference_wrapper<Proxy> Proxy;
+    std::reference_wrapper<DatabaseServer> DatabaseServer;
+};
+
+class DynamicActor
+{
+protected:
+    struct DynamicMessageHandler
     {
-        uint32_t Context;
-        uint16_t MessageType;
-        uint16_t BodySize;
-        std::variant<std::array<char, 256>, std::unique_ptr<char[]>> Body;
+        const uint32_t TypeIndex;
+
+        explicit DynamicMessageHandler(const uint32_t typeIndex)
+            : TypeIndex{ typeIndex }
+        {
+        }
+
+        virtual ~DynamicMessageHandler() = default;
+
+        virtual void operator()(DynamicActor& actor, std::unique_ptr<DynamicMessage> message) = 0;
     };
+
 public:
-    explicit Actor() = default;
-
-    virtual ~Actor() = default;
-
-    Actor(const Actor&) = delete;
-
-    Actor& operator=(const Actor&) = delete;
-
-    Actor(Actor&&) = delete;
-
-    Actor& operator=(Actor&&) = delete;
-
-    void PushMessage(const uint32_t context, const uint16_t messageType, const uint16_t bodySize, const char* const body)
+    explicit DynamicActor(const ActorInitializer& initializer)
+        : Proxy{ initializer.Proxy.get() }, DatabaseServer{ initializer.DatabaseServer.get() }, pushIndex_{ 0 }
     {
-        if (bodySize <= 256)
-        {
-            std::scoped_lock lock{pushMutex_};
-            auto& message = messageQueue_[pushIndex_].emplace();
-            message.Context = context;
-            message.MessageType = messageType;
-            message.BodySize = bodySize;
-            memcpy(std::get<0>(message.Body).data(), body, bodySize);
-        }
-        else
-        {
-            auto largeBody = std::make_unique<char[]>(bodySize);
-            memcpy(largeBody.get(), body, bodySize);
-
-            std::scoped_lock lock{pushMutex_};
-            messageQueue_[pushIndex_].emplace(context, messageType, bodySize, std::move(largeBody));
-        }
     }
 
-    void HandleAllMessages()
+    virtual ~DynamicActor() = default;
+
+    DynamicActor(const DynamicActor&) = delete;
+
+    DynamicActor& operator=(const DynamicActor&) = delete;
+
+    DynamicActor(DynamicActor&&) = delete;
+
+    DynamicActor& operator=(DynamicActor&&) = delete;
+
+    void HandleAllMessages();
+
+    void PushMessage(std::unique_ptr<DynamicMessage> message)
     {
-        while (true)
-        {
-            if (messageQueue_[1 - pushIndex_].empty())
-            {
-                std::scoped_lock lock{pushMutex_};
-                pushIndex_ = 1 - pushIndex_;
-            }
-
-            if (messageQueue_[1 - pushIndex_].empty())
-            {
-                return;
-            }
-
-            const auto& [context, messageType, bodySize, body] = messageQueue_[1 - pushIndex_].front();
-            OnHandleMessage(
-                context,
-                messageType,
-                bodySize,
-                std::holds_alternative<std::array<char, 256>>(body) ? std::get<std::array<char, 256>>(body).data() : std::get<std::unique_ptr<char[]>>(body).get());
-            messageQueue_[1 - pushIndex_].pop();
-        }
+        std::scoped_lock lock{ pushMutex_ };
+        messageQueue_[pushIndex_].emplace_back(std::move(message));
     }
+
 
 protected:
-    virtual void OnHandleMessage(uint32_t context, uint16_t messageType, uint16_t bodySize, const char* body) = 0;
+    Proxy& Proxy;
+    DatabaseServer& DatabaseServer;
+
+    void RegisterHandler(std::unique_ptr<DynamicMessageHandler> handler);
 
 private:
     std::mutex pushMutex_;
     int pushIndex_;
-    std::queue<Message> messageQueue_[2];
+    std::vector<std::unique_ptr<DynamicMessage>> messageQueue_[2];
+    absl::flat_hash_map<uint32_t, std::unique_ptr<DynamicMessageHandler>> messageHandlers_;
+
+    virtual void OnUnknownMessageReceived(std::unique_ptr<DynamicMessage> message) = 0;
+};
+
+template<typename TDerivedActor>
+class Actor : public DynamicActor
+{
+    template<typename TMessage>
+    struct MessageHandler final : DynamicMessageHandler
+    {
+        explicit MessageHandler()
+            : DynamicMessageHandler{ TMessage::GetTypeIndex() }
+        {
+        }
+
+        void operator()(DynamicActor& actor, std::unique_ptr<DynamicMessage> message) override
+        {
+            static_cast<TDerivedActor&>(actor).Handle(std::unique_ptr<TMessage>(static_cast<TMessage*>(message.release())));
+        }
+    };
+
+public:
+    explicit Actor(const ActorInitializer& initializer)
+        : DynamicActor{ initializer }
+    {
+    }
+
+protected:
+    template<typename TMessage>
+    void Accept()
+    {
+        DynamicActor::RegisterHandler(std::make_unique<MessageHandler<TMessage>>());
+    }
+
+private:
+    void OnUnknownMessageReceived(std::unique_ptr<DynamicMessage> message) override = 0;
 };
 
 #endif //ACTOR_H

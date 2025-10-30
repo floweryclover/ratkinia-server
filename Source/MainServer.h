@@ -5,21 +5,14 @@
 #ifndef RATKINIASERVER_MAINSERVER_H
 #define RATKINIASERVER_MAINSERVER_H
 
-#include "Environment.h"
-#include "NetworkServer.h"
-#include "EntityManager.h"
-#include "ComponentManager.h"
-#include "SystemManager.h"
-#include "Event/EventManager.h"
-#include "GlobalObject/GlobalObjectManager.h"
-#include "Database/DatabaseManager.h"
-#include "Stub.h"
-#include "Proxy.h"
 #include <absl/container/flat_hash_map.h>
 #include <queue>
 #include <shared_mutex>
 
-class Actor;
+class DynamicActor;
+class NetworkServer;
+class DatabaseServer;
+class Proxy;
 
 class alignas(64) MainServer final
 {
@@ -50,30 +43,19 @@ public:
         commands_.emplace(std::move(command));
     }
 
-    void PushMessage(uint32_t assosiatedActor, uint32_t context, uint16_t messageType, uint16_t bodySize, const char* body);
-
 private:
     const uint32_t WorkerThreadsCount;
     std::queue<std::string> commands_;
     std::mutex commandsMutex_;
 
-    NetworkServer networkServer_;
-    Stub stub_;
-    Proxy proxy_;
-
-    EntityManager entityManager_;
-    ComponentManager componentManager_;
-    SystemManager systemManager_;
-    EventManager eventManager_;
-    GlobalObjectManager globalObjectManager_;
-    DatabaseManager databaseManager_;
-
-    MutableEnvironment environment_;
+    const std::unique_ptr<NetworkServer> NetworkServer;
+    const std::unique_ptr<DatabaseServer> DatabaseServer;
+    const std::unique_ptr<Proxy> Proxy;
 
     std::shared_mutex actorsMutex_;
     uint32_t newActorId_;
-    absl::flat_hash_map<uint32_t, std::unique_ptr<Actor>> actors_;
-    std::vector<Actor*> actorRunQueue_;
+    absl::flat_hash_map<uint32_t, std::unique_ptr<DynamicActor>> actors_;
+    std::vector<DynamicActor*> actorRunQueue_;
 
     std::vector<std::thread> workerThreads_;
     uint32_t workerThreadsWorkVersion_;
@@ -86,7 +68,9 @@ private:
     alignas(64) std::atomic_uint32_t workingThreadCount_;
     alignas(64) std::atomic_uint32_t workIndex_;
 
-    void WorkerThreadBody(uint32_t threadId);
+    [[noreturn]] void WorkerThreadBody(uint32_t threadId);
+
+    void PushMessage(uint32_t assosiatedActor, uint32_t context, uint16_t messageType, uint16_t bodySize, const char* body);
 };
 
 #endif //RATKINIASERVER_MAINSERVER_H

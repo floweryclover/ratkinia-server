@@ -2,28 +2,27 @@
 // Created by floweryclover on 2025-09-29.
 //
 
-#include "D_Accounts.h"
+#include "T_Accounts.h"
 #include <pqxx/pqxx>
 
 using namespace pqxx;
 
-D_Accounts::D_Accounts(connection& connection)
-    : Database{ connection }
+T_Accounts::T_Accounts(connection& connection)
+    : Table{ connection }
 {
     nontransaction selectAccountsWork{ dbConnection };
     for (const auto accounts = selectAccountsWork.exec("SELECT * FROM player.accounts");
          const auto row : accounts)
     {
         const auto [pair, emplaced] = accounts_.emplace(
-            std::piecewise_construct,
-            std::forward_as_tuple(row[0].as<uint64_t>()),
-            std::forward_as_tuple(row[0].as<uint64_t>(), row[1].as<std::string>(), row[2].as<std::string>()));
+            row[0].as<uint64_t>(),
+            std::make_unique<Row>(row[0].as<uint64_t>(), row[1].as<std::string>(), row[2].as<std::string>()));
 
-        accountsByUserId_.emplace(pair->second.Account, &pair->second);
+        accountsByUserId_.emplace(pair->second->Account, pair->second.get());
     }
 }
 
-D_Accounts::CreateAccountResult D_Accounts::TryCreateAccount(const std::string& account,
+T_Accounts::CreateAccountResult T_Accounts::TryCreateAccount(const std::string& account,
                                                              const std::string& password)
 {
     if (accountsByUserId_.contains(account))
@@ -47,10 +46,9 @@ D_Accounts::CreateAccountResult D_Accounts::TryCreateAccount(const std::string& 
     }
 
     const auto [pair, emplaced] = accounts_.emplace(
-        std::piecewise_construct,
-        std::forward_as_tuple(id),
-        std::forward_as_tuple(id, account, std::move(password)));
-    accountsByUserId_.emplace(std::move(account), &pair->second);
+        id,
+        std::make_unique<Row>(id, account, std::move(password)));
+    accountsByUserId_.emplace(std::move(account), pair->second.get());
 
     return CreateAccountResult::Success;
 }

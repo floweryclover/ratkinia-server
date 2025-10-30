@@ -105,7 +105,8 @@ void PrintImpl(Args... args)
 
 #define CRASH_NOW() \
     do  \
-    {   \
+    {\
+ERR_PRINT("FATAL");\
         std::abort();   \
     }   \
     while (0)
@@ -113,7 +114,7 @@ void PrintImpl(Args... args)
 #define CRASH_NOW_MSG(msg) \
     do  \
     {   \
-        ERR_PRINT(msg); \
+        ERR_PRINT_VARARGS("FATAL: ", msg); \
         std::abort();   \
     }   \
     while (0)

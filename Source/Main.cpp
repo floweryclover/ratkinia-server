@@ -1,11 +1,8 @@
-﻿#include "NetworkServer.h"
-
-#include "MainServer.h"
-
+﻿#include "MainServer.h"
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 #include <WinSock2.h>
-
+#include <mimalloc-new-delete.h>
 
 // ReSharper disable once CppDFAConstantFunctionResult
 int main()

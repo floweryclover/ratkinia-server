@@ -2,8 +2,8 @@
 // Created by floweryclover on 2025-09-29.
 //
 
-#ifndef DATABASETABLE_H
-#define DATABASETABLE_H
+#ifndef TABLE_H
+#define TABLE_H
 
 #include "ErrorMacros.h"
 #include "RuntimeOrder.h"
@@ -14,29 +14,29 @@ namespace pqxx
     class connection;
 }
 
-class Database
+class Table
 {
 public:
-    explicit Database(pqxx::connection& connection)
+    explicit Table(pqxx::connection& connection)
         : dbConnection{ connection }
     {
     }
 
-    virtual ~Database() = default;
+    virtual ~Table() = default;
 
-    Database(const Database&) = delete;
+    Table(const Table&) = delete;
 
-    Database& operator=(const Database&) = delete;
+    Table& operator=(const Table&) = delete;
 
-    Database(Database&&) = delete;
+    Table(Table&&) = delete;
 
-    Database& operator=(Database&&) = delete;
+    Table& operator=(Table&&) = delete;
 
 protected:
     pqxx::connection& dbConnection;
 };
 
-#define DATABASE(TClass)                                                                  \
+#define TABLE(TClass)                                                                  \
 public:                                                                                         \
     explicit TClass(pqxx::connection& connection);                                              \
                                                                                                 \
@@ -55,4 +55,4 @@ public:                                                                         
 private:                                                                                        \
     inline static uint32_t RuntimeOrder = UnregisteredRuntimeOrder;
 
-#endif //DATABASETABLE_H
+#endif //TABLE_H

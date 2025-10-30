@@ -5,12 +5,12 @@
 #ifndef D_ACCOUNTS_H
 #define D_ACCOUNTS_H
 
-#include "Database.h"
-#include <unordered_map>
+#include "Table.h"
+#include <absl/container/flat_hash_map.h>
 
-class D_Accounts final : public Database
+class T_Accounts final : public Table
 {
-    DATABASE(D_Accounts)
+    TABLE(T_Accounts)
 
 public:
     enum class CreateAccountResult
@@ -20,7 +20,7 @@ public:
         UnknownError,
     };
 
-    struct AccountRow
+    struct Row
     {
         uint64_t Id;
         std::string Account; // 6~24자, [a-z0-9_]
@@ -29,14 +29,14 @@ public:
 
     CreateAccountResult TryCreateAccount(const std::string& account, const std::string& password);
 
-    const AccountRow* TryGetAccountByUserId(const std::string& userId) const
+    const Row* TryGetAccountByUserId(const std::string& userId) const
     {
         return accountsByUserId_.contains(userId) ? accountsByUserId_.at(userId) : nullptr;
     }
 
 private:
-    std::unordered_map<uint64_t, AccountRow> accounts_;
-    std::unordered_map<std::string, const AccountRow*> accountsByUserId_;
+    absl::flat_hash_map<uint64_t, std::unique_ptr<Row>> accounts_;
+    absl::flat_hash_map<std::string, Row*> accountsByUserId_;
 };
 
 #endif //D_ACCOUNTS_H
