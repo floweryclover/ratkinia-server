@@ -19,38 +19,23 @@ struct ActorInitializer final
     std::reference_wrapper<DatabaseServer> DatabaseServer;
 };
 
-class DynamicActor
+class Actor
 {
-protected:
-    struct DynamicMessageHandler
-    {
-        const uint32_t TypeIndex;
-
-        explicit DynamicMessageHandler(const uint32_t typeIndex)
-            : TypeIndex{ typeIndex }
-        {
-        }
-
-        virtual ~DynamicMessageHandler() = default;
-
-        virtual void operator()(DynamicActor& actor, std::unique_ptr<DynamicMessage> message) = 0;
-    };
-
 public:
-    explicit DynamicActor(const ActorInitializer& initializer)
+    explicit Actor(const ActorInitializer& initializer)
         : Proxy{ initializer.Proxy.get() }, DatabaseServer{ initializer.DatabaseServer.get() }, pushIndex_{ 0 }
     {
     }
 
-    virtual ~DynamicActor() = default;
+    virtual ~Actor() = default;
 
-    DynamicActor(const DynamicActor&) = delete;
+    Actor(const Actor&) = delete;
 
-    DynamicActor& operator=(const DynamicActor&) = delete;
+    Actor& operator=(const Actor&) = delete;
 
-    DynamicActor(DynamicActor&&) = delete;
+    Actor(Actor&&) = delete;
 
-    DynamicActor& operator=(DynamicActor&&) = delete;
+    Actor& operator=(Actor&&) = delete;
 
     void HandleAllMessages();
 
@@ -60,54 +45,28 @@ public:
         messageQueue_[pushIndex_].emplace_back(std::move(message));
     }
 
-
 protected:
     Proxy& Proxy;
     DatabaseServer& DatabaseServer;
 
-    void RegisterHandler(std::unique_ptr<DynamicMessageHandler> handler);
+    template<typename TMessage, typename TDerivedActor>
+    void Accept(TDerivedActor*)
+    {
+        const auto [iter, emplaced] = messageHandlers_.emplace(
+            TMessage::GetTypeIndex(),
+            [](Actor& actor, std::unique_ptr<DynamicMessage> message)
+            {
+                static_cast<TDerivedActor&>(actor).Handle(std::unique_ptr<TMessage>(static_cast<TMessage*>(message.release())));
+            });
+    }
 
 private:
     std::mutex pushMutex_;
     int pushIndex_;
     std::vector<std::unique_ptr<DynamicMessage>> messageQueue_[2];
-    absl::flat_hash_map<uint32_t, std::unique_ptr<DynamicMessageHandler>> messageHandlers_;
+    absl::flat_hash_map<uint32_t, void(*)(Actor&, std::unique_ptr<DynamicMessage>)> messageHandlers_;
 
     virtual void OnUnknownMessageReceived(std::unique_ptr<DynamicMessage> message) = 0;
-};
-
-template<typename TDerivedActor>
-class Actor : public DynamicActor
-{
-    template<typename TMessage>
-    struct MessageHandler final : DynamicMessageHandler
-    {
-        explicit MessageHandler()
-            : DynamicMessageHandler{ TMessage::GetTypeIndex() }
-        {
-        }
-
-        void operator()(DynamicActor& actor, std::unique_ptr<DynamicMessage> message) override
-        {
-            static_cast<TDerivedActor&>(actor).Handle(std::unique_ptr<TMessage>(static_cast<TMessage*>(message.release())));
-        }
-    };
-
-public:
-    explicit Actor(const ActorInitializer& initializer)
-        : DynamicActor{ initializer }
-    {
-    }
-
-protected:
-    template<typename TMessage>
-    void Accept()
-    {
-        DynamicActor::RegisterHandler(std::make_unique<MessageHandler<TMessage>>());
-    }
-
-private:
-    void OnUnknownMessageReceived(std::unique_ptr<DynamicMessage> message) override = 0;
 };
 
 #endif //ACTOR_H

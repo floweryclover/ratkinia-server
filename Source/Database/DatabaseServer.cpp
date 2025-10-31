@@ -3,6 +3,7 @@
 //
 
 #include "DatabaseServer.h"
+#include "Table.h"
 #include <pqxx/pqxx>
 
 using namespace pqxx;

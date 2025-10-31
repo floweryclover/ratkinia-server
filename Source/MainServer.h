@@ -9,7 +9,7 @@
 #include <queue>
 #include <shared_mutex>
 
-class DynamicActor;
+class Actor;
 class NetworkServer;
 class DatabaseServer;
 class Proxy;
@@ -54,8 +54,8 @@ private:
 
     std::shared_mutex actorsMutex_;
     uint32_t newActorId_;
-    absl::flat_hash_map<uint32_t, std::unique_ptr<DynamicActor>> actors_;
-    std::vector<DynamicActor*> actorRunQueue_;
+    absl::flat_hash_map<uint32_t, std::unique_ptr<Actor>> actors_;
+    std::vector<Actor*> actorRunQueue_;
 
     std::vector<std::thread> workerThreads_;
     uint32_t workerThreadsWorkVersion_;

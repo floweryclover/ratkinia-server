@@ -11,7 +11,7 @@ A_Auth::A_Auth(const ActorInitializer& initializer)
     : Actor{ initializer },
       authThread_{ &A_Auth::AuthBackgroundThreadBody, this }
 {
-    Accept<Msg_Cts>();
+    Accept<Msg_Cts>(this);
 }
 
 A_Auth::AuthenticationResult A_Auth::TryAuthenticate(const uint32_t context, const uint64_t id)

@@ -13,7 +13,7 @@
 
 struct Msg_Cts;
 
-class A_Auth final : public Actor<A_Auth>
+class A_Auth final : public Actor
 {
     enum class AuthenticationResult : uint8_t
     {

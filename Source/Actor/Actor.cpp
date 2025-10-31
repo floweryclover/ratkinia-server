@@ -5,7 +5,7 @@
 #include "Actor.h"
 #include "ErrorMacros.h"
 
-void DynamicActor::HandleAllMessages()
+void Actor::HandleAllMessages()
 {
     if (messageQueue_[1 - pushIndex_].empty())
     {
@@ -27,11 +27,5 @@ void DynamicActor::HandleAllMessages()
         }
     }
     messageQueue_[1 - pushIndex_].clear();
-}
-
-void DynamicActor::RegisterHandler(std::unique_ptr<DynamicMessageHandler> handler)
-{
-    const auto [iter, emplaced] = messageHandlers_.emplace(handler->TypeIndex, std::move(handler));
-    CRASH_COND(!emplaced);
 }
 
