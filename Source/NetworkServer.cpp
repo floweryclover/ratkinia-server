@@ -144,12 +144,16 @@ void NetworkServer::WorkerThreadBody(const int threadId)
                     ERR_PRINT_VARARGS("세션 ", ioData.Session->Context, " 송신 에러: ", GetLastError());
                 }
             }
-            else
+            else if (ioData.IoType == Session::IoType_Receive)
             {
                 if (GetLastError() != ERROR_NETNAME_DELETED && GetLastError() != ERROR_CONNECTION_ABORTED)
                 {
                     ERR_PRINT_VARARGS("세션 ", ioData.Session->Context, " 수신 에러: ", GetLastError());
                 }
+            }
+            else
+            {
+                CRASH_NOW();
             }
 
             const uint32_t context = ioData.Session->Context;
@@ -162,9 +166,20 @@ void NetworkServer::WorkerThreadBody(const int threadId)
         {
             PostSend(*ioData.Session, bytesTransferred);
         }
-        else
+        else if (ioData.IoType == Session::IoType_Receive)
         {
             PostReceive(*ioData.Session, bytesTransferred);
+        }
+        else
+        {
+            std::osyncstream{std::cout} << "Hi" << std::endl;
+            std::shared_lock lock{sessionsMutex_};
+            ioData.Session->PostInitiateSend();
+            if (!ioData.Session->TrySendAsync())
+            {
+                const uint32_t context = ioData.Session->Context;
+                SessionCleanupRoutine(context);
+            }
         }
     }
     std::osyncstream{ std::cout } << "IOCP 워커 스레드 " << threadId << " 종료" << std::endl;
@@ -233,8 +248,8 @@ void NetworkServer::PostAccept(OverlappedEx& slot)
     const auto emplacedSession = [&]
     {
         std::unique_lock lock{sessionsMutex_};
-        const auto [iter, emplaced] = sessions_.emplace(context, std::move(session));
-        return emplaced ? iter->second.get() : nullptr;
+        const auto [sessionIter, emplacedSession] = sessions_.try_emplace(context, std::move(session));
+        return emplacedSession ? sessionIter->second.get() : nullptr;
     }();
 
     CRASH_COND(emplacedSession == nullptr);
@@ -255,10 +270,10 @@ void NetworkServer::PostReceive(Session& session, const size_t bytesTransferred)
                bytesTransferred > 0 &&
                session.TryReceiveAsync();
 
-        while (const auto message = session.TryPeekMessage())
+        while (const auto message = session.PeekReceivedMessage())
         {
             PushMessage(session.AssociatedActor, session.Context, message->MessageType, message->BodySize, message->Body);
-            session.Pop(RatkiniaProtocol::MessageHeaderSize + message->BodySize);
+            session.PopReceivedMessage(RatkiniaProtocol::MessageHeaderSize + message->BodySize);
         }
 
         return returnValue;
@@ -270,8 +285,19 @@ void NetworkServer::PostReceive(Session& session, const size_t bytesTransferred)
     }
 }
 
+// ReSharper disable once CppMemberFunctionMayBeConst
+void NetworkServer::InitiateSend(Session& session)
+{
+    if (const auto overlapped = session.InitiateSendAsync())
+    {
+        const auto result = PostQueuedCompletionStatus(Iocp, 0, 0, overlapped);
+        CRASH_COND_MSG(result == FALSE, GetLastError());
+    }
+}
+
 void NetworkServer::PostSend(Session& session, const size_t bytesTransferred)
 {
+    std::osyncstream{std::cout} << bytesTransferred << std::endl;
     const uint32_t context = session.Context;
     const bool succeeded = [&]
     {

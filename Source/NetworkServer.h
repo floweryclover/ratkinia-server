@@ -41,6 +41,19 @@ public:
         SessionCleanupRoutine(context);
     }
 
+    template<typename TProtobufMessage>
+    void SendMessageTo(const uint32_t context, const uint16_t messageType, const TProtobufMessage& message)
+    {
+        std::shared_lock lock{sessionsMutex_};
+        const auto session = sessions_.find(context);
+        if (session == sessions_.end())
+        {
+            return;
+        }
+        session->second->PushMessage(messageType, message);
+        InitiateSend(*session->second.get());
+    }
+
 private:
     const uint32_t InitialAssociatedActor;
     const std::function<void(uint32_t, uint32_t, uint16_t, uint16_t, const char*)> PushMessage;
@@ -66,6 +79,8 @@ private:
     void PostAccept(OverlappedEx& slot);
 
     void PostReceive(Session& session, size_t bytesTransferred);
+
+    void InitiateSend(Session& session);
 
     void PostSend(Session& session, size_t bytesTransferred);
 

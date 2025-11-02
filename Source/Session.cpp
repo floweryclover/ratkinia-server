@@ -25,8 +25,6 @@ Session::Session(const SOCKET socket,
       ReceiveAppBuffer{ std::make_unique<char[]>(BufferCapacity) },
       ReceiveContiguousPopBuffer{ std::make_unique<char[]>(RatkiniaProtocol::MessageMaxSize) },
       SendTlsBuffer{ std::make_unique<char[]>(BufferCapacity) },
-      SendAppBuffer{ std::make_unique<char[]>(BufferCapacity) },
-      SendContiguousPushBuffer{ std::make_unique<char[]>(RatkiniaProtocol::MessageMaxSize) },
       ioContexts_{},
       isIoOnline_{}
 {
@@ -37,6 +35,7 @@ Session::Session(const SOCKET socket,
 
     ioContexts_[IoType_Send].Data.emplace<OverlappedEx::IoData>(IoType_Send, this);
     ioContexts_[IoType_Receive].Data.emplace<OverlappedEx::IoData>(IoType_Receive, this);
+    ioContexts_[IoType_InitiateSend].Data.emplace<OverlappedEx::IoData>(IoType_InitiateSend, this);
 
     std::osyncstream{ std::cout } << "[접속] " << Address << std::endl;
 }
@@ -152,23 +151,60 @@ bool Session::TrySendAsync()
         }
 
         isIoOnline_[IoType_Send] = true;
+
+        const size_t loadedHead = sendTlsBufferHead_.load(std::memory_order_relaxed);
+        const size_t loadedTail = sendTlsBufferTail_.load(std::memory_order_acquire);
+
+        const bool isSendAppQueueEmpty = [this]
+        {
+            std::scoped_lock lock{sendAppQueueMutex_};
+            return sendAppQueue_.empty();
+        }();
+
+        if (loadedHead == loadedTail && isSendAppQueueEmpty)
+        {
+            isIoOnline_[IoType_Send] = false;
+            return true; // 정상 상태임. 보낼 것이 없을 뿐
+        }
     }
 
+    while (true)
+    {
+        const auto sendBuffersProcessResult = TryProcessSendBuffers();
+        if (sendBuffersProcessResult == SendBuffersProcessResult::Success)
+        {
+            break;
+        }
+
+        if (sendBuffersProcessResult == SendBuffersProcessResult::Failed)
+        {
+            std::scoped_lock lock{ ioOperationMutexes_[IoType_Send] };
+            isIoOnline_[IoType_Send] = false;
+            return false;
+        }
+
+        // sendBuffersProcessResult == SendBuffersProcessResult::WantProcessReceiveBuffers
+        auto receiveBuffersProcessResult = TryProcessReceiveBuffers();
+        if (receiveBuffersProcessResult == ReceiveBuffersProcessResult::WantProcessSendBuffers)
+        {
+            break;
+        }
+        if (receiveBuffersProcessResult == ReceiveBuffersProcessResult::Failed)
+        {
+            std::scoped_lock lock{ ioOperationMutexes_[IoType_Send] };
+            isIoOnline_[IoType_Send] = false;
+            return false;
+        }
+    }
+
+    WSABUF wsabuf;
     const size_t loadedHead = sendTlsBufferHead_.load(std::memory_order_relaxed);
     const size_t loadedTail = sendTlsBufferTail_.load(std::memory_order_acquire);
 
-    WSABUF wsabuf;
     wsabuf.buf = SendTlsBuffer.get() + loadedHead;
     wsabuf.len = loadedTail >= loadedHead
                      ? loadedTail - loadedHead
                      : BufferCapacity - loadedHead;
-
-    if (wsabuf.len == 0)
-    {
-        std::scoped_lock lock{ ioOperationMutexes_[IoType_Send] };
-        isIoOnline_[IoType_Send] = false;
-        return false;
-    }
 
     if (0
         != WSASend(Socket,
@@ -202,32 +238,27 @@ bool Session::TryPostSend(const size_t bytesTransferred)
     sendTlsBufferHead_.store((sendTlsBufferHead_.load(std::memory_order_relaxed) + bytesTransferred) % BufferCapacity,
                              std::memory_order_release);
 
-    while (true)
+    return true;
+}
+
+LPOVERLAPPED Session::InitiateSendAsync()
+{
     {
-        const auto sendBuffersProcessResult = TryProcessSendBuffers();
-        if (sendBuffersProcessResult == SendBuffersProcessResult::Success)
+        std::scoped_lock lock{ ioOperationMutexes_[IoType_InitiateSend] };
+        if (isIoOnline_[IoType_InitiateSend])
         {
-            break;
+            return nullptr;
         }
-
-        if (sendBuffersProcessResult == SendBuffersProcessResult::Failed)
-        {
-            return false;
-        }
-
-        // sendBuffersProcessResult == SendBuffersProcessResult::WantProcessReceiveBuffers
-        auto receiveBuffersProcessResult = TryProcessReceiveBuffers();
-        if (receiveBuffersProcessResult == ReceiveBuffersProcessResult::WantProcessSendBuffers)
-        {
-            break;
-        }
-        if (receiveBuffersProcessResult == ReceiveBuffersProcessResult::Failed)
-        {
-            return false;
-        }
+        isIoOnline_[IoType_InitiateSend] = true;
     }
 
-    return true;
+    return reinterpret_cast<LPOVERLAPPED>(&ioContexts_[IoType_InitiateSend]);
+}
+
+void Session::PostInitiateSend()
+{
+    std::scoped_lock lock{ioOperationMutexes_[IoType_InitiateSend]};
+    isIoOnline_[IoType_InitiateSend] = false;
 }
 
 void Session::PostIoFailed(const uint8_t failedIoType)
@@ -240,11 +271,11 @@ bool Session::Close()
 {
     Cleanup();
 
-    std::scoped_lock lock{ ioOperationMutexes_[IoType_Send], ioOperationMutexes_[IoType_Receive] };
-    return !isIoOnline_[IoType_Send] && !isIoOnline_[IoType_Receive];
+    std::scoped_lock lock{ ioOperationMutexes_[IoType_Send], ioOperationMutexes_[IoType_Receive], ioOperationMutexes_[IoType_InitiateSend]};
+    return !isIoOnline_[IoType_Send] && !isIoOnline_[IoType_Receive] && !isIoOnline_[IoType_InitiateSend];
 }
 
-std::optional<Session::MessagePeekResult> Session::TryPeekMessage()
+std::optional<Session::MessagePeekResult> Session::PeekReceivedMessage()
 {
     using namespace RatkiniaProtocol;
 
@@ -362,7 +393,7 @@ Session::ReceiveBuffersProcessResult Session::TryProcessReceiveBuffers()
 
             const int result = [&]
             {
-                std::lock_guard lock{ sslMutex_ };
+                std::scoped_lock lock{ sslMutex_ };
                 return SSL_read(Ssl, ReceiveAppBuffer.get() + adjustedTail, enqueuableSize);
             }();
             if (result <= 0)
@@ -415,29 +446,35 @@ void Session::Cleanup()
 
 Session::SendBuffersProcessResult Session::TryProcessSendBuffers()
 {
-    std::lock_guard sendBuffersProcessLock{ sendBuffersProcessMutex_ };
+    std::scoped_lock sendBuffersProcessLock{ sendBuffersProcessMutex_ };
 
     bool wantRead = false;
     {
-        // Send App Buffer -> Write Bio
-        const size_t loadedHead = sendAppBufferHead_.load(std::memory_order_relaxed);
-        const size_t loadedTail = sendAppBufferTail_.load(std::memory_order_acquire);
-        size_t totalEncrypted = 0;
+        // Send App Queue -> Write Bio
         while (true)
         {
-            const size_t adjustedHead = (loadedHead + totalEncrypted) % BufferCapacity;
-            const size_t encryptableSize = adjustedHead <= loadedTail
-                                               ? loadedTail - adjustedHead
-                                               : BufferCapacity - adjustedHead;
-            if (encryptableSize == 0)
+            auto [messageSize, message] = [&]() -> std::pair<size_t, std::unique_ptr<char[]>>
+            {
+                std::scoped_lock lock{sendAppQueueMutex_};
+                if (sendAppQueue_.empty())
+                {
+                    return {0, nullptr};
+                }
+
+                auto front = std::move(sendAppQueue_.front());
+                sendAppQueue_.pop();
+                return std::move(front);
+            }();
+            
+            if (message == nullptr)
             {
                 break;
             }
 
             const int result = [&]
             {
-                std::lock_guard lock{ sslMutex_ };
-                return SSL_write(Ssl, SendAppBuffer.get() + adjustedHead, encryptableSize);
+                std::scoped_lock lock{ sslMutex_ };
+                return SSL_write(Ssl, message.get(), messageSize);
             }();
             if (result <= 0)
             {
@@ -457,15 +494,8 @@ Session::SendBuffersProcessResult Session::TryProcessSendBuffers()
                                   ERR_error_string(ERR_get_error(), buf));
                 return SendBuffersProcessResult::Failed;
             }
-
-            totalEncrypted += result;
         }
-
-        if (totalEncrypted > 0)
-        {
-            sendAppBufferHead_.store((loadedHead + totalEncrypted) % BufferCapacity, std::memory_order_release);
-        }
-    } // Send App Buffer -> Write Bio
+    } // Send App Queue -> Write Bio
 
     {
         // Write Bio -> Send Tls Buffer
@@ -486,7 +516,7 @@ Session::SendBuffersProcessResult Session::TryProcessSendBuffers()
 
             const int result = [&]
             {
-                std::lock_guard lock{ sslMutex_ };
+                std::scoped_lock lock{ sslMutex_ };
                 return BIO_read(WriteBio, SendTlsBuffer.get() + adjustedTail, enqueuableSize);
             }();
             if (result <= 0)

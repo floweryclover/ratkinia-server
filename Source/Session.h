@@ -11,6 +11,7 @@
 #include <memory>
 #include <optional>
 #include <array>
+#include <queue>
 
 struct ssl_st;
 struct ssl_ctx_st;
@@ -24,6 +25,7 @@ using SSL = ssl_st;
 using SSL_CTX = ssl_ctx_st;
 using BIO = bio_st;
 using LPOVERLAPPED = _OVERLAPPED*;
+using HANDLE = void*;
 
 inline uint16_t Htons(const uint16_t value)
 {
@@ -70,11 +72,6 @@ inline std::optional<std::pair<size_t, size_t>> GetReadableSizes(const size_t bu
 
 class alignas(64) Session final
 {
-    enum class IoState : uint8_t
-    {
-        Online,
-    };
-
     enum class ReceiveBuffersProcessResult : uint8_t
     {
         Success,
@@ -101,6 +98,7 @@ class alignas(64) Session final
 public:
     constexpr static uint8_t IoType_Send = 0;
     constexpr static uint8_t IoType_Receive = 1;
+    constexpr static uint8_t IoType_InitiateSend = 2;
 
     const uint32_t Context;
 
@@ -122,22 +120,26 @@ public:
     [[nodiscard]]
     bool TryPostSend(size_t bytesTransferred);
 
+    [[nodiscard]]
+    LPOVERLAPPED InitiateSendAsync();
+
+    void PostInitiateSend();
+
     void PostIoFailed(uint8_t failedIoType);
 
     bool Close();
 
-    void Pop(const size_t size)
+    void PopReceivedMessage(const size_t size)
     {
         receiveAppBufferHead_.store((receiveAppBufferHead_.load(std::memory_order_relaxed) + size) % BufferCapacity,
                                     std::memory_order_release);
     }
 
     [[nodiscard]]
-    std::optional<MessagePeekResult> TryPeekMessage();
+    std::optional<MessagePeekResult> PeekReceivedMessage();
 
-    template <typename TMessage>
-    [[nodiscard]]
-    bool TryPushMessage(uint16_t messageType, const TMessage& message);
+    template<typename TProtobufMessage>
+    void PushMessage(uint16_t messageType, const TProtobufMessage& message);
 
 private:
     const SOCKET Socket;
@@ -153,13 +155,11 @@ private:
     const std::unique_ptr<char[]> ReceiveContiguousPopBuffer;
 
     const std::unique_ptr<char[]> SendTlsBuffer;
-    const std::unique_ptr<char[]> SendAppBuffer;
-    const std::unique_ptr<char[]> SendContiguousPushBuffer;
 
-    alignas(64) std::array<OverlappedEx, 2> ioContexts_;
-    alignas(64) std::array<bool, 2> isIoOnline_;
+    alignas(64) std::array<OverlappedEx, 3> ioContexts_;
+    alignas(64) std::array<bool, 3> isIoOnline_;
+    alignas(64) std::array<std::mutex, 3> ioOperationMutexes_;
     alignas(64) std::atomic_bool shouldClose_;
-    alignas(64) std::array<std::mutex, 2> ioOperationMutexes_;
 
     alignas(64) std::atomic<size_t> receiveTlsBufferHead_;
     alignas(64) std::atomic<size_t> receiveTlsBufferTail_;
@@ -169,9 +169,9 @@ private:
 
     alignas(64) std::atomic<size_t> sendTlsBufferHead_;
     alignas(64) std::atomic<size_t> sendTlsBufferTail_;
-    alignas(64) std::atomic<size_t> sendAppBufferHead_;
-    alignas(64) std::atomic<size_t> sendAppBufferTail_;
     alignas(64) std::mutex sendBuffersProcessMutex_;
+    alignas(64) std::queue<std::pair<size_t, std::unique_ptr<char[]>>> sendAppQueue_;
+    alignas(64) std::mutex sendAppQueueMutex_;
 
     SendBuffersProcessResult TryProcessSendBuffers();
 
@@ -198,58 +198,24 @@ private:
                                  sendTlsBufferTail_.load(std::memory_order_relaxed));
     }
 
-    size_t GetSendAppBufferSize() const
-    {
-        return GetRingBufferSize(BufferCapacity,
-                                 sendAppBufferHead_.load(std::memory_order_relaxed),
-                                 sendAppBufferTail_.load(std::memory_order_relaxed));
-    }
-
     void Cleanup();
 };
 
-template <typename TMessage>
-bool Session::TryPushMessage(const uint16_t messageType, const TMessage& message)
+template<typename TProtobufMessage>
+void Session::PushMessage(const uint16_t messageType, const TProtobufMessage& message)
 {
-    const size_t bodySize = message.ByteSizeLong();
-    const size_t size = RatkiniaProtocol::MessageHeaderSize + bodySize;
-    const size_t loadedTail = sendAppBufferTail_.load(std::memory_order_relaxed);
-    const size_t loadedHead = sendAppBufferHead_.load(std::memory_order_acquire);
-    const size_t sendBufferSize = loadedHead <= loadedTail
-                                      ? loadedTail - loadedHead
-                                      : BufferCapacity - loadedHead + loadedTail;
-    const size_t available = BufferCapacity - sendBufferSize - 1;
-    if (size > available)
+    using namespace RatkiniaProtocol;
+
+    auto serializedMessage = std::make_unique<char[]>(sizeof(MessageHeaderSize) + message.ByteSizeLong());
+
+    const MessageHeader header{Htons(messageType), Htons(message.ByteSizeLong())};
+    memcpy(serializedMessage.get(), &header, sizeof(MessageHeader));
+    message.SerializeToArray(serializedMessage.get() + sizeof(MessageHeader), message.ByteSizeLong());
+
     {
-        return false;
+        std::scoped_lock lock{sendAppQueueMutex_};
+        sendAppQueue_.emplace(sizeof(MessageHeader) + message.ByteSizeLong(), std::move(serializedMessage));
     }
-
-    const RatkiniaProtocol::MessageHeader header
-    {
-        Htons(messageType),
-        Htons(static_cast<uint16_t>(bodySize))
-    };
-
-    const size_t primarySize = std::min<size_t>(size, BufferCapacity - loadedTail);
-    const size_t secondarySize = size - primarySize;
-
-    if (primarySize == size)
-    {
-        memcpy(SendAppBuffer.get() + loadedTail, &header, RatkiniaProtocol::MessageHeaderSize);
-        message.SerializeToArray(SendAppBuffer.get() + loadedTail + RatkiniaProtocol::MessageHeaderSize, bodySize);
-    }
-    else
-    {
-        memcpy(SendContiguousPushBuffer.get(), &header, RatkiniaProtocol::MessageHeaderSize);
-        message.SerializeToArray(SendContiguousPushBuffer.get() + RatkiniaProtocol::MessageHeaderSize, bodySize);
-
-        memcpy(SendAppBuffer.get() + loadedTail, SendContiguousPushBuffer.get(), primarySize);
-        memcpy(SendAppBuffer.get(), SendContiguousPushBuffer.get() + primarySize, secondarySize);
-    }
-
-    sendAppBufferTail_.store((loadedTail + size) % BufferCapacity, std::memory_order_release);
-    return true;
 }
-
 
 #endif //RATKINIASERVER_SESSION_H

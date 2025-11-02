@@ -24,11 +24,12 @@ public:
     ActorNetworkInterface& operator=(ActorNetworkInterface&&) = delete;
 
     template<typename TProtobufMessage>
-    void WriteMessage(const uint32_t context, const uint16_t messageType, const TProtobufMessage& message)
+    void WriteMessage(const uint32_t context, const RatkiniaProtocol::StcMessageType messageType, const TProtobufMessage& message)
     {
-        //networkServer_.SendMessage(context, messageType, message);
+        networkServer_.SendMessageTo(context, static_cast<uint16_t>(messageType), message);
     }
 
+    // ReSharper disable once CppMemberFunctionMayBeConst
     void DisconnectSession(const uint32_t context)
     {
         networkServer_.DisconnectSession(context);
