@@ -36,6 +36,11 @@ public:
 
     NetworkServer& operator=(NetworkServer&&) = delete;
 
+    void DisconnectSession(const uint32_t context)
+    {
+        SessionCleanupRoutine(context);
+    }
+
 private:
     const uint32_t InitialAssociatedActor;
     const std::function<void(uint32_t, uint32_t, uint16_t, uint16_t, const char*)> PushMessage;
