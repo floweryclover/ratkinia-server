@@ -4,11 +4,7 @@
 
 #include "S_Auth.h"
 
-#include "Environment.h"
 #include "GlobalObjectManager.h"
-#include "EventManager.h"
-#include "Event_SessionErased.h"
-#include "Proxy.h"
 
 constexpr const char* FailedReason[] =
 {

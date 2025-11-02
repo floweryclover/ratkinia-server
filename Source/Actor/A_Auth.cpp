@@ -7,6 +7,8 @@
 #include <syncstream>
 #include <iostream>
 
+#include "ActorNetworkInterface.h"
+
 A_Auth::A_Auth(const ActorInitializer& initializer)
     : Actor{ initializer },
       authThread_{ &A_Auth::AuthBackgroundThreadBody, this }
@@ -102,6 +104,26 @@ void A_Auth::AuthBackgroundThreadBody()
 
 void A_Auth::Handle(std::unique_ptr<Msg_Cts> message)
 {
-    std::osyncstream{std::cout} << message->Context << std::endl;
+    HandleCts(message->Context, message->MessageType, message->BodySize, message->Body.get());
 }
 
+void A_Auth::OnUnknownMessageType(const uint32_t context, const RatkiniaProtocol::CtsMessageType messageType)
+{
+}
+
+void A_Auth::OnParseMessageFailed(const uint32_t context, const RatkiniaProtocol::CtsMessageType messageType)
+{
+}
+
+void A_Auth::OnUnhandledMessageType(const RatkiniaProtocol::CtsMessageType messageType)
+{
+}
+
+void A_Auth::OnRegisterRequest(const uint32_t context, const std::string& account, const std::string& password)
+{
+}
+
+void A_Auth::OnLoginRequest(const uint32_t context, const std::string& account, const std::string& password)
+{
+    ActorNetworkInterface.DisconnectSession(context);
+}

@@ -1,0 +1,41 @@
+//
+// Created by floweryclover on 2025-11-02.
+//
+
+#ifndef ACTORNETWORKINTERFACE_H
+#define ACTORNETWORKINTERFACE_H
+
+#include "StcProxy.gen.h"
+#include "NetworkServer.h"
+
+class ActorNetworkInterface final : public RatkiniaProtocol::IStcProxy<ActorNetworkInterface>
+{
+public:
+    explicit ActorNetworkInterface(NetworkServer& networkServer);
+
+    ~ActorNetworkInterface() override;
+
+    ActorNetworkInterface(const ActorNetworkInterface&) = delete;
+
+    ActorNetworkInterface& operator=(const ActorNetworkInterface&) = delete;
+
+    ActorNetworkInterface(ActorNetworkInterface&&) = delete;
+
+    ActorNetworkInterface& operator=(ActorNetworkInterface&&) = delete;
+
+    template<typename TProtobufMessage>
+    void WriteMessage(const uint32_t context, const uint16_t messageType, const TProtobufMessage& message)
+    {
+        //networkServer_.SendMessage(context, messageType, message);
+    }
+
+    void DisconnectSession(const uint32_t context)
+    {
+        networkServer_.DisconnectSession(context);
+    }
+
+private:
+    NetworkServer& networkServer_;
+};
+
+#endif //ACTORNETWORKINTERFACE_H

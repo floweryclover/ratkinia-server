@@ -10,12 +10,14 @@
 #include <vector>
 #include <mutex>
 
-class Proxy;
+#include "ErrorMacros.h"
+
+class ActorNetworkInterface;
 class DatabaseServer;
 
 struct ActorInitializer final
 {
-    std::reference_wrapper<Proxy> Proxy;
+    std::reference_wrapper<ActorNetworkInterface> ActorNetworkInterface;
     std::reference_wrapper<DatabaseServer> DatabaseServer;
 };
 
@@ -23,7 +25,7 @@ class Actor
 {
 public:
     explicit Actor(const ActorInitializer& initializer)
-        : Proxy{ initializer.Proxy.get() }, DatabaseServer{ initializer.DatabaseServer.get() }, pushIndex_{ 0 }
+        : ActorNetworkInterface{ initializer.ActorNetworkInterface.get() }, DatabaseServer{ initializer.DatabaseServer.get() }, pushIndex_{ 0 }
     {
     }
 
@@ -41,22 +43,24 @@ public:
 
     void PushMessage(std::unique_ptr<DynamicMessage> message)
     {
+        ERR_FAIL_COND(message == nullptr);
+
         std::scoped_lock lock{ pushMutex_ };
         messageQueue_[pushIndex_].emplace_back(std::move(message));
     }
 
 protected:
-    Proxy& Proxy;
+    ActorNetworkInterface& ActorNetworkInterface;
     DatabaseServer& DatabaseServer;
 
-    template<typename TMessage, typename TDerivedActor>
-    void Accept(TDerivedActor*)
+    template<typename TMessage>
+    void Accept([[maybe_unused]] auto derivedActor)
     {
         const auto [iter, emplaced] = messageHandlers_.emplace(
             TMessage::GetTypeIndex(),
             [](Actor& actor, std::unique_ptr<DynamicMessage> message)
             {
-                static_cast<TDerivedActor&>(actor).Handle(std::unique_ptr<TMessage>(static_cast<TMessage*>(message.release())));
+                static_cast<std::remove_pointer_t<decltype(derivedActor)>&>(actor).Handle(std::unique_ptr<TMessage>(static_cast<TMessage*>(message.release())));
             });
     }
 

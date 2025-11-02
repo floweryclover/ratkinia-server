@@ -7,8 +7,8 @@
 #include "DatabaseRegistrar.h"
 #include "NetworkServer.h"
 #include "DatabaseServer.h"
+#include "ActorNetworkInterface.h"
 #include "Msg_Cts.h"
-#include "Proxy.h"
 
 MainServer::MainServer(const uint32_t mainWorkerThreadsCount,
                        const char* const listenAddress,
@@ -36,14 +36,14 @@ MainServer::MainServer(const uint32_t mainWorkerThreadsCount,
               certificateFile,
               privateKeyFile)
       },
-      Proxy{ std::make_unique<class Proxy>(*NetworkServer) },
       DatabaseServer{ std::make_unique<class DatabaseServer>(dbHost) },
+      ActorNetworkInterface{ std::make_unique<class ActorNetworkInterface>(*NetworkServer) },
       newActorId_{ 1 },
       workerThreadsWorkVersion_{ 0 },
       mainThreadShouldWakeup_{ false },
       workingThreadCount_{ WorkerThreadsCount }
 {
-    actorRunQueue_.emplace_back(actors_.emplace(0, std::make_unique<A_Auth>(ActorInitializer{*Proxy, *DatabaseServer})).first->second.get());
+    actorRunQueue_.emplace_back(actors_.emplace(0, std::make_unique<A_Auth>(ActorInitializer{*ActorNetworkInterface, *DatabaseServer})).first->second.get());
 
     for (int i = 1; i <= WorkerThreadsCount; ++i)
     {
@@ -78,7 +78,6 @@ void MainServer::Run()
                 });
             mainThreadShouldWakeup_ = false;
         }
-
 
         std::this_thread::sleep_for(std::chrono::milliseconds{ 16 });
     }

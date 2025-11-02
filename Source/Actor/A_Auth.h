@@ -7,13 +7,14 @@
 
 #include "Actor.h"
 #include "AuthJob.h"
+#include "CtsStub.gen.h"
 #include <absl/container/flat_hash_map.h>
 #include <optional>
 #include <queue>
 
 struct Msg_Cts;
 
-class A_Auth final : public Actor
+class A_Auth final : public Actor, public RatkiniaProtocol::ICtsStub<A_Auth>
 {
     enum class AuthenticationResult : uint8_t
     {
@@ -27,10 +28,21 @@ public:
 
     void Handle(std::unique_ptr<Msg_Cts> message);
 
+    void OnUnknownMessageType(uint32_t context, RatkiniaProtocol::CtsMessageType messageType) override;
+
+    void OnParseMessageFailed(uint32_t context, RatkiniaProtocol::CtsMessageType messageType) override;
+
+    void OnUnhandledMessageType(RatkiniaProtocol::CtsMessageType messageType) override;
+
+    void OnRegisterRequest(uint32_t context, const std::string& account, const std::string& password) override;
+
+    void OnLoginRequest(uint32_t context, const std::string& account, const std::string& password) override;
+
 protected:
     void OnUnknownMessageReceived(std::unique_ptr<DynamicMessage> message) override
     {
         CRASH_NOW();
+        // ReSharper disable once CppDFAUnreachableCode
     }
 
 private:

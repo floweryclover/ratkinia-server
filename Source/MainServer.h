@@ -9,6 +9,7 @@
 #include <queue>
 #include <shared_mutex>
 
+class ActorNetworkInterface;
 class Actor;
 class NetworkServer;
 class DatabaseServer;
@@ -50,7 +51,7 @@ private:
 
     const std::unique_ptr<NetworkServer> NetworkServer;
     const std::unique_ptr<DatabaseServer> DatabaseServer;
-    const std::unique_ptr<Proxy> Proxy;
+    const std::unique_ptr<ActorNetworkInterface> ActorNetworkInterface;
 
     std::shared_mutex actorsMutex_;
     uint32_t newActorId_;
