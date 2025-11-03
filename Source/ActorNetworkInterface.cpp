@@ -5,8 +5,6 @@
 #include "ActorNetworkInterface.h"
 
 ActorNetworkInterface::ActorNetworkInterface(NetworkServer& networkServer)
-    : networkServer_{ networkServer }
+    : networkServer_{ &networkServer }
 {
 }
-
-ActorNetworkInterface::~ActorNetworkInterface() = default;

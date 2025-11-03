@@ -9,6 +9,8 @@
 #include <queue>
 #include <shared_mutex>
 
+class ActorMessageDispatcher;
+class ActorRegistry;
 class ActorNetworkInterface;
 class Actor;
 class NetworkServer;
@@ -49,14 +51,11 @@ private:
     std::queue<std::string> commands_;
     std::mutex commandsMutex_;
 
+    const std::unique_ptr<ActorRegistry> ActorRegistry;
+    const std::unique_ptr<ActorMessageDispatcher> ActorMessageDispatcher;
     const std::unique_ptr<NetworkServer> NetworkServer;
-    const std::unique_ptr<DatabaseServer> DatabaseServer;
     const std::unique_ptr<ActorNetworkInterface> ActorNetworkInterface;
-
-    std::shared_mutex actorsMutex_;
-    uint32_t newActorId_;
-    absl::flat_hash_map<uint32_t, std::unique_ptr<Actor>> actors_;
-    std::vector<Actor*> actorRunQueue_;
+    const std::unique_ptr<DatabaseServer> DatabaseServer;
 
     std::vector<std::thread> workerThreads_;
     uint32_t workerThreadsWorkVersion_;
@@ -70,8 +69,6 @@ private:
     alignas(64) std::atomic_uint32_t workIndex_;
 
     [[noreturn]] void WorkerThreadBody(uint32_t threadId);
-
-    void PushMessage(uint32_t assosiatedActor, uint32_t context, uint16_t messageType, uint16_t bodySize, const char* body);
 };
 
 #endif //RATKINIASERVER_MAINSERVER_H

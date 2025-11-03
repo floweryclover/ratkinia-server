@@ -7,19 +7,19 @@
 
 #include "Session.h"
 #include <absl/container/flat_hash_map.h>
-#include <functional>
 #include <thread>
 #include <vector>
 #include <memory>
 #include <shared_mutex>
 
+class ActorMessageDispatcher;
 using HANDLE = void*;
 
 class alignas(64) NetworkServer final
 {
 public:
-    explicit NetworkServer(uint32_t initialAssociatedActor,
-                           std::function<void(uint32_t, uint32_t, uint16_t, uint16_t, const char*)> pushMessage,
+    explicit NetworkServer(std::string initialAssociatedActor,
+                           ActorMessageDispatcher& actorMessageDispatcher,
                            const char* listenAddress,
                            unsigned short listenPort,
                            uint32_t acceptPoolSize,
@@ -44,7 +44,7 @@ public:
     template<typename TProtobufMessage>
     void SendMessageTo(const uint32_t context, const uint16_t messageType, const TProtobufMessage& message)
     {
-        std::shared_lock lock{sessionsMutex_};
+        std::shared_lock lock{ sessionsMutex_ };
         const auto session = sessions_.find(context);
         if (session == sessions_.end())
         {
@@ -55,15 +55,15 @@ public:
     }
 
 private:
-    const uint32_t InitialAssociatedActor;
-    const std::function<void(uint32_t, uint32_t, uint16_t, uint16_t, const char*)> PushMessage;
-
+    const std::string InitialAssociatedActor;
     const HANDLE Iocp;
     const SOCKET ListenSocket;
     SSL_CTX* const SslCtx;
 
     const uint32_t AcceptPoolSize;
     const std::unique_ptr<OverlappedEx[]> AcceptPool;
+
+    ActorMessageDispatcher& actorMessageDispatcher_;
 
     alignas(64) std::atomic_uint32_t newContext_;
 

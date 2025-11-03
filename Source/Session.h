@@ -102,9 +102,13 @@ public:
 
     const uint32_t Context;
 
-    uint32_t AssociatedActor;
+    std::string AssociatedActor;
 
-    explicit Session(SOCKET socket, std::string address, SSL* ssl, uint32_t context, uint32_t initialAssociatedActor);
+    explicit Session(SOCKET socket,
+                     std::string address,
+                     SSL* ssl,
+                     uint32_t context,
+                     std::string initialAssociatedActor);
 
     ~Session();
 
@@ -136,7 +140,7 @@ public:
     }
 
     [[nodiscard]]
-    std::optional<MessagePeekResult> PeekReceivedMessage();
+    std::optional<MessagePeekResult> PeekReceivedMessage() const;
 
     template<typename TProtobufMessage>
     void PushMessage(uint16_t messageType, const TProtobufMessage& message);
@@ -208,12 +212,12 @@ void Session::PushMessage(const uint16_t messageType, const TProtobufMessage& me
 
     auto serializedMessage = std::make_unique<char[]>(sizeof(MessageHeaderSize) + message.ByteSizeLong());
 
-    const MessageHeader header{Htons(messageType), Htons(message.ByteSizeLong())};
+    const MessageHeader header{ Htons(messageType), Htons(message.ByteSizeLong()) };
     memcpy(serializedMessage.get(), &header, sizeof(MessageHeader));
     message.SerializeToArray(serializedMessage.get() + sizeof(MessageHeader), message.ByteSizeLong());
 
     {
-        std::scoped_lock lock{sendAppQueueMutex_};
+        std::scoped_lock lock{ sendAppQueueMutex_ };
         sendAppQueue_.emplace(sizeof(MessageHeader) + message.ByteSizeLong(), std::move(serializedMessage));
     }
 }

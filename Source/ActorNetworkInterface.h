@@ -13,30 +13,19 @@ class ActorNetworkInterface final : public RatkiniaProtocol::IStcProxy<ActorNetw
 public:
     explicit ActorNetworkInterface(NetworkServer& networkServer);
 
-    ~ActorNetworkInterface() override;
-
-    ActorNetworkInterface(const ActorNetworkInterface&) = delete;
-
-    ActorNetworkInterface& operator=(const ActorNetworkInterface&) = delete;
-
-    ActorNetworkInterface(ActorNetworkInterface&&) = delete;
-
-    ActorNetworkInterface& operator=(ActorNetworkInterface&&) = delete;
-
     template<typename TProtobufMessage>
     void WriteMessage(const uint32_t context, const RatkiniaProtocol::StcMessageType messageType, const TProtobufMessage& message)
     {
-        networkServer_.SendMessageTo(context, static_cast<uint16_t>(messageType), message);
+        networkServer_->SendMessageTo(context, static_cast<uint16_t>(messageType), message);
     }
 
-    // ReSharper disable once CppMemberFunctionMayBeConst
     void DisconnectSession(const uint32_t context)
     {
-        networkServer_.DisconnectSession(context);
+        networkServer_->DisconnectSession(context);
     }
 
 private:
-    NetworkServer& networkServer_;
+    NetworkServer* networkServer_;
 };
 
 #endif //ACTORNETWORKINTERFACE_H

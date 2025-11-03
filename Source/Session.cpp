@@ -13,9 +13,9 @@ Session::Session(const SOCKET socket,
                  std::string address,
                  SSL* const ssl,
                  const uint32_t context,
-                 const uint32_t initialAssociatedActor)
+                 std::string initialAssociatedActor)
     : Context{ context },
-      AssociatedActor{ initialAssociatedActor },
+      AssociatedActor{ std::move(initialAssociatedActor) },
       Socket{ socket },
       Address{ std::move(address) },
       Ssl{ ssl },
@@ -157,7 +157,7 @@ bool Session::TrySendAsync()
 
         const bool isSendAppQueueEmpty = [this]
         {
-            std::scoped_lock lock{sendAppQueueMutex_};
+            std::scoped_lock lock{ sendAppQueueMutex_ };
             return sendAppQueue_.empty();
         }();
 
@@ -257,7 +257,7 @@ LPOVERLAPPED Session::InitiateSendAsync()
 
 void Session::PostInitiateSend()
 {
-    std::scoped_lock lock{ioOperationMutexes_[IoType_InitiateSend]};
+    std::scoped_lock lock{ ioOperationMutexes_[IoType_InitiateSend] };
     isIoOnline_[IoType_InitiateSend] = false;
 }
 
@@ -271,11 +271,13 @@ bool Session::Close()
 {
     Cleanup();
 
-    std::scoped_lock lock{ ioOperationMutexes_[IoType_Send], ioOperationMutexes_[IoType_Receive], ioOperationMutexes_[IoType_InitiateSend]};
+    std::scoped_lock lock{
+        ioOperationMutexes_[IoType_Send], ioOperationMutexes_[IoType_Receive], ioOperationMutexes_[IoType_InitiateSend]
+    };
     return !isIoOnline_[IoType_Send] && !isIoOnline_[IoType_Receive] && !isIoOnline_[IoType_InitiateSend];
 }
 
-std::optional<Session::MessagePeekResult> Session::PeekReceivedMessage()
+std::optional<Session::MessagePeekResult> Session::PeekReceivedMessage() const
 {
     using namespace RatkiniaProtocol;
 
@@ -455,17 +457,17 @@ Session::SendBuffersProcessResult Session::TryProcessSendBuffers()
         {
             auto [messageSize, message] = [&]() -> std::pair<size_t, std::unique_ptr<char[]>>
             {
-                std::scoped_lock lock{sendAppQueueMutex_};
+                std::scoped_lock lock{ sendAppQueueMutex_ };
                 if (sendAppQueue_.empty())
                 {
-                    return {0, nullptr};
+                    return { 0, nullptr };
                 }
 
                 auto front = std::move(sendAppQueue_.front());
                 sendAppQueue_.pop();
                 return std::move(front);
             }();
-            
+
             if (message == nullptr)
             {
                 break;

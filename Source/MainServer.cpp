@@ -3,12 +3,13 @@
 //
 
 #include "MainServer.h"
-#include "A_Auth.h"
+#include "ActorMessageDispatcher.h"
 #include "DatabaseRegistrar.h"
 #include "NetworkServer.h"
 #include "DatabaseServer.h"
 #include "ActorNetworkInterface.h"
-#include "Msg_Cts.h"
+#include "ActorRegistry.h"
+#include "A_Auth.h"
 
 MainServer::MainServer(const uint32_t mainWorkerThreadsCount,
                        const char* const listenAddress,
@@ -18,33 +19,25 @@ MainServer::MainServer(const uint32_t mainWorkerThreadsCount,
                        const char* const certificateFile,
                        const char* const privateKeyFile)
     : WorkerThreadsCount{ mainWorkerThreadsCount },
+      ActorRegistry{ std::make_unique<class ActorRegistry>() },
+      ActorMessageDispatcher{ std::make_unique<class ActorMessageDispatcher>(*ActorRegistry) },
       NetworkServer
       {
           std::make_unique<class NetworkServer>(
-              0,
-              [this](const uint32_t assosiatedActor,
-                     const uint32_t context,
-                     const uint16_t messageType,
-                     const uint16_t bodySize,
-                     const char* const body)
-              {
-                  PushMessage(assosiatedActor, context, messageType, bodySize, body);
-              },
+              "A_Auth",
+              *ActorMessageDispatcher,
               listenAddress,
               listenPort,
               acceptPoolSize,
               certificateFile,
               privateKeyFile)
       },
+ActorNetworkInterface{ std::make_unique<class ActorNetworkInterface>(*NetworkServer) },
       DatabaseServer{ std::make_unique<class DatabaseServer>(dbHost) },
-      ActorNetworkInterface{ std::make_unique<class ActorNetworkInterface>(*NetworkServer) },
-      newActorId_{ 1 },
       workerThreadsWorkVersion_{ 0 },
       mainThreadShouldWakeup_{ false },
       workingThreadCount_{ WorkerThreadsCount }
 {
-    actorRunQueue_.emplace_back(actors_.emplace(0, std::make_unique<A_Auth>(ActorInitializer{*ActorNetworkInterface, *DatabaseServer})).first->second.get());
-
     for (int i = 1; i <= WorkerThreadsCount; ++i)
     {
         workerThreads_.emplace_back(&MainServer::WorkerThreadBody, this, i);
@@ -52,6 +45,15 @@ MainServer::MainServer(const uint32_t mainWorkerThreadsCount,
 
     RegisterDatabase(*DatabaseServer);
     DatabaseServer->Finalize();
+
+    ActorRegistry->Register(std::make_unique<A_Auth>(
+        ActorInitializer
+        {
+            "A_Auth",
+            *DatabaseServer,
+            *ActorNetworkInterface,
+            *ActorMessageDispatcher
+        }));
 }
 
 MainServer::~MainServer() = default;
@@ -85,26 +87,6 @@ void MainServer::Run()
     // ReSharper disable once CppDFAUnreachableCode
 }
 
-void MainServer::PushMessage(const uint32_t assosiatedActor,
-                             const uint32_t context,
-                             const uint16_t messageType,
-                             const uint16_t bodySize,
-                             const char* const body)
-{
-    auto ownedBody = std::make_unique<char[]>(bodySize);
-    memcpy(ownedBody.get(), body, bodySize);
-
-    auto message = std::make_unique<Msg_Cts>();
-    message->Context = context;
-    message->MessageType = messageType;
-    message->BodySize = bodySize;
-    message->Body = std::move(ownedBody);
-
-    std::shared_lock lock{ actorsMutex_ };
-    CRASH_COND_MSG(!actors_.contains(assosiatedActor), assosiatedActor);
-    actors_.at(assosiatedActor)->PushMessage(std::move(message));
-}
-
 void MainServer::WorkerThreadBody(const uint32_t)
 {
     uint32_t desiredVersion = 1;
@@ -122,7 +104,8 @@ void MainServer::WorkerThreadBody(const uint32_t)
         while (true)
         {
             const uint32_t workIndex = workIndex_.fetch_add(1, std::memory_order_relaxed);
-            if (workIndex >= actorRunQueue_.size())
+            const auto actor = ActorRegistry->Get(workIndex);
+            if (!actor)
             {
                 if (workingThreadCount_.fetch_sub(1, std::memory_order_relaxed) == 1)
                 {
@@ -135,7 +118,7 @@ void MainServer::WorkerThreadBody(const uint32_t)
                 break;
             }
 
-            actorRunQueue_[workIndex]->HandleAllMessages();
+            actor->Run();
         }
     }
     // ReSharper disable once CppDFAUnreachableCode

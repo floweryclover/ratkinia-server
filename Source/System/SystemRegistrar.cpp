@@ -3,10 +3,7 @@
 //
 
 #include "SystemManager.h"
-
-#include "S_Auth.h"
 #include "S_PlayerCharacters_UnpossessOnDisconnected.h"
-
 #include "Initializer/S_Initializer_PlayerCharacters.h"
 
 void RegisterInitializerSystems(SystemManager& systemManager);
@@ -15,7 +12,6 @@ void RegisterSystems(SystemManager& systemManager)
 {
     RegisterInitializerSystems(systemManager);
 
-    systemManager.RegisterSystem<S_Auth>();
     systemManager.RegisterSystem<S_PlayerCharacters_UnpossessOnDisconnected>();
 }
 

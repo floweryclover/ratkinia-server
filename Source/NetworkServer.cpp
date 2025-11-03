@@ -3,26 +3,29 @@
 //
 
 #include "NetworkServer.h"
+#include "ActorMessageDispatcher.h"
 #include "ErrorMacros.h"
+#include "Msg_Cts.h"
+#include "Msg_SessionDisconnected.h"
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <WS2tcpip.h>
 #include <mswsock.h>
 
-NetworkServer::NetworkServer(const uint32_t initialAssociatedActor,
-                             std::function<void(uint32_t, uint32_t, uint16_t, uint16_t, const char*)> pushMessage,
+NetworkServer::NetworkServer(std::string initialAssociatedActor,
+                             ActorMessageDispatcher& actorMessageDispatcher,
                              const char* const listenAddress,
                              unsigned short listenPort,
                              const uint32_t acceptPoolSize,
                              const char* const sslCertificateFile,
                              const char* const sslPrivateKeyFile)
-    : InitialAssociatedActor{ initialAssociatedActor },
-      PushMessage{ std::move(pushMessage) },
+    : InitialAssociatedActor{ std::move(initialAssociatedActor) },
       Iocp{ CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0) },
       ListenSocket{ socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) },
       SslCtx{ SSL_CTX_new(TLS_server_method()) },
       AcceptPoolSize{ acceptPoolSize },
       AcceptPool{ std::make_unique<OverlappedEx[]>(AcceptPoolSize) },
+      actorMessageDispatcher_{ actorMessageDispatcher },
       newContext_{ 0 }
 {
     CRASH_COND(Iocp == nullptr);
@@ -172,8 +175,8 @@ void NetworkServer::WorkerThreadBody(const int threadId)
         }
         else
         {
-            std::osyncstream{std::cout} << "Hi" << std::endl;
-            std::shared_lock lock{sessionsMutex_};
+            std::osyncstream{ std::cout } << "Hi" << std::endl;
+            std::shared_lock lock{ sessionsMutex_ };
             ioData.Session->PostInitiateSend();
             if (!ioData.Session->TrySendAsync())
             {
@@ -216,11 +219,12 @@ void NetworkServer::PostAccept(OverlappedEx& slot)
                    WSAGetLastError());
 
     CRASH_COND_MSG(CreateIoCompletionPort(reinterpret_cast<HANDLE>(acceptData.ClientSocket),
-                               Iocp,
-                               reinterpret_cast<ULONG_PTR>(this),
-                               0) == nullptr, GetLastError());
+                       Iocp,
+                       reinterpret_cast<ULONG_PTR>(this),
+                       0) == nullptr,
+                   GetLastError());
 
-    SOCKADDR_IN* localAddr, *remoteAddr;
+    SOCKADDR_IN* localAddr,* remoteAddr;
     int localAddrLen, remoteAddrLen;
     GetAcceptExSockaddrs(acceptData.AddressBuffer,
                          0,
@@ -247,7 +251,7 @@ void NetworkServer::PostAccept(OverlappedEx& slot)
 
     const auto emplacedSession = [&]
     {
-        std::unique_lock lock{sessionsMutex_};
+        std::unique_lock lock{ sessionsMutex_ };
         const auto [sessionIter, emplacedSession] = sessions_.try_emplace(context, std::move(session));
         return emplacedSession ? sessionIter->second.get() : nullptr;
     }();
@@ -267,12 +271,21 @@ void NetworkServer::PostReceive(Session& session, const size_t bytesTransferred)
         std::shared_lock lock{ sessionsMutex_ };
 
         const bool returnValue = session.TryPostReceive(bytesTransferred) &&
-               bytesTransferred > 0 &&
-               session.TryReceiveAsync();
+                                 bytesTransferred > 0 &&
+                                 session.TryReceiveAsync();
 
         while (const auto message = session.PeekReceivedMessage())
         {
-            PushMessage(session.AssociatedActor, session.Context, message->MessageType, message->BodySize, message->Body);
+            auto ownedBody = std::make_unique<char[]>(message->BodySize);
+            memcpy(ownedBody.get(), message->Body, message->BodySize);
+
+            auto msg_cts = std::make_unique<Msg_Cts>();
+            msg_cts->Context = context;
+            msg_cts->MessageType = message->MessageType;
+            msg_cts->BodySize = message->BodySize;
+            msg_cts->Body = std::move(ownedBody);
+
+            CRASH_COND(!actorMessageDispatcher_.TryPushMessageTo(session.AssociatedActor, std::move(msg_cts)));
             session.PopReceivedMessage(RatkiniaProtocol::MessageHeaderSize + message->BodySize);
         }
 
@@ -297,7 +310,7 @@ void NetworkServer::InitiateSend(Session& session)
 
 void NetworkServer::PostSend(Session& session, const size_t bytesTransferred)
 {
-    std::osyncstream{std::cout} << bytesTransferred << std::endl;
+    std::osyncstream{ std::cout } << bytesTransferred << std::endl;
     const uint32_t context = session.Context;
     const bool succeeded = [&]
     {
@@ -314,16 +327,32 @@ void NetworkServer::PostSend(Session& session, const size_t bytesTransferred)
 
 void NetworkServer::SessionCleanupRoutine(const uint32_t context)
 {
-    if (std::shared_lock lock{ sessionsMutex_ };
-        !sessions_.contains(context) ||
-        !sessions_.at(context)->Close())
+    {
+        std::shared_lock lock{ sessionsMutex_ };
+    }
+    if (const auto iter = sessions_.find(context);
+        iter == sessions_.end() || !iter->second->Close())
     {
         return;
     }
 
-    if (std::unique_lock lock{ sessionsMutex_ };
-        sessions_.contains(context))
+    const auto assosiatedActor = [&]() -> std::optional<std::string>
     {
-        sessions_.erase(context);
+        std::unique_lock lock{ sessionsMutex_ };
+        const auto iter = sessions_.find(context);
+        if (iter == sessions_.end())
+        {
+            return std::nullopt;
+        }
+        auto actor = std::move(iter->second->AssociatedActor);
+        sessions_.erase(iter);
+        return std::move(actor);
+    }();
+
+    if (assosiatedActor)
+    {
+        auto msg_sessionDisconnected = std::make_unique<Msg_SessionDisconnected>();
+        msg_sessionDisconnected->Context = context;
+        CRASH_COND(!actorMessageDispatcher_.TryPushMessageTo(*assosiatedActor, std::move(msg_sessionDisconnected)));
     }
 }

@@ -5,7 +5,7 @@
 #include "Actor.h"
 #include "ErrorMacros.h"
 
-void Actor::HandleAllMessages()
+void Actor::Run()
 {
     if (messageQueue_[1 - pushIndex_].empty())
     {
@@ -27,5 +27,7 @@ void Actor::HandleAllMessages()
         }
     }
     messageQueue_[1 - pushIndex_].clear();
+
+    Tick();
 }
 

@@ -48,7 +48,7 @@ public:
     template<typename TTable>
     TTable& Get()
     {
-        return static_cast<const TTable&>(*tables_[TTable::GetRuntimeOrder()]);
+        return static_cast<TTable&>(*tables_[TTable::GetRuntimeOrder()]);
     }
 
 private:

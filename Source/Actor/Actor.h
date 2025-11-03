@@ -6,26 +6,34 @@
 #define ACTOR_H
 
 #include "Message.h"
+#include "ErrorMacros.h"
 #include <absl/container/flat_hash_map.h>
 #include <vector>
 #include <mutex>
 
-#include "ErrorMacros.h"
-
+class ActorMessageDispatcher;
 class ActorNetworkInterface;
 class DatabaseServer;
 
 struct ActorInitializer final
 {
-    std::reference_wrapper<ActorNetworkInterface> ActorNetworkInterface;
+    const char* const Name;
     std::reference_wrapper<DatabaseServer> DatabaseServer;
+    std::reference_wrapper<ActorNetworkInterface> ActorNetworkInterface;
+    std::reference_wrapper<ActorMessageDispatcher> ActorMessageDispatcher;
 };
 
 class Actor
 {
 public:
+    const std::string Name;
+
     explicit Actor(const ActorInitializer& initializer)
-        : ActorNetworkInterface{ initializer.ActorNetworkInterface.get() }, DatabaseServer{ initializer.DatabaseServer.get() }, pushIndex_{ 0 }
+        : Name{ initializer.Name },
+          ActorNetworkInterface{ initializer.ActorNetworkInterface.get() },
+          DatabaseServer{ initializer.DatabaseServer.get() },
+          ActorMessageDispatcher{ initializer.ActorMessageDispatcher.get() },
+          pushIndex_{ 0 }
     {
     }
 
@@ -39,7 +47,7 @@ public:
 
     Actor& operator=(Actor&&) = delete;
 
-    void HandleAllMessages();
+    void Run();
 
     void PushMessage(std::unique_ptr<DynamicMessage> message)
     {
@@ -52,6 +60,11 @@ public:
 protected:
     ActorNetworkInterface& ActorNetworkInterface;
     DatabaseServer& DatabaseServer;
+    ActorMessageDispatcher& ActorMessageDispatcher;
+
+    virtual void Tick()
+    {
+    }
 
     template<typename TMessage>
     void Accept([[maybe_unused]] auto derivedActor)
@@ -60,7 +73,8 @@ protected:
             TMessage::GetTypeIndex(),
             [](Actor& actor, std::unique_ptr<DynamicMessage> message)
             {
-                static_cast<std::remove_pointer_t<decltype(derivedActor)>&>(actor).Handle(std::unique_ptr<TMessage>(static_cast<TMessage*>(message.release())));
+                static_cast<std::remove_pointer_t<decltype(derivedActor)>&>(actor).Handle(
+                    std::unique_ptr<TMessage>(static_cast<TMessage*>(message.release())));
             });
     }
 
