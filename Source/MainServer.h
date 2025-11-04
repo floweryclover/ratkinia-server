@@ -14,7 +14,7 @@ class ActorRegistry;
 class ActorNetworkInterface;
 class Actor;
 class NetworkServer;
-class DatabaseServer;
+class DbConnectionPool;
 class Proxy;
 
 class alignas(64) MainServer final
@@ -24,6 +24,7 @@ public:
                         const char* listenAddress,
                         uint16_t listenPort,
                         const char* dbHost,
+                        size_t maxDbConnections,
                         uint16_t acceptPoolSize,
                         const char* certificateFile,
                         const char* privateKeyFile);
@@ -55,7 +56,7 @@ private:
     const std::unique_ptr<ActorMessageDispatcher> ActorMessageDispatcher;
     const std::unique_ptr<NetworkServer> NetworkServer;
     const std::unique_ptr<ActorNetworkInterface> ActorNetworkInterface;
-    const std::unique_ptr<DatabaseServer> DatabaseServer;
+    const std::unique_ptr<DbConnectionPool> DbConnectionPool;
 
     std::vector<std::thread> workerThreads_;
     uint32_t workerThreadsWorkVersion_;

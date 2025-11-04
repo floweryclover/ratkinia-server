@@ -23,6 +23,7 @@ int main()
         "127.0.0.1",
         31415,
         "postgresql://ratkinia_agent:1234@127.0.0.1:5432/ratkinia",
+        16,
         2,
         "ratkinia.crt",
         "ratkinia.key"
@@ -47,8 +48,7 @@ int main()
     try
     {
         mainServer->Run();
-    }
-    catch (const std::exception& e)
+    } catch (const std::exception& e)
     {
         std::cerr << e.what() << std::endl;
         std::abort();

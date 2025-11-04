@@ -16,28 +16,28 @@ inline static const std::string EmptyHashedPassword{ "$2a$12$YeNGaZyLvcdFapdGyzz
 class LoginJob final
 {
 public:
-    static constexpr uint32_t InvalidId = std::numeric_limits<uint32_t>::max();
+    static constexpr uint64_t InvalidId = std::numeric_limits<uint32_t>::max();
 
     const uint32_t Context;
-    const uint32_t Id;
+    const uint64_t Id;
     const std::string RequestedPassword;
-    const std::array<char, 64> SavedPassword;
+    const std::string SavedPassword;
 
     explicit LoginJob(const uint32_t context,
-                      const uint32_t id,
+                      const uint64_t id,
                       std::string requestedPassword,
-                      const std::array<char, 64>& savedPassword)
+                      std::string savedPassword)
         : Context{ context },
           Id{ std::move(id) },
           RequestedPassword{ std::move(requestedPassword) },
-          SavedPassword{ savedPassword },
+          SavedPassword{ std::move(savedPassword) },
           isPasswordMatch_{ false }
     {
     }
 
     void ExecuteBackgroundJob()
     {
-        const int result = bcrypt_checkpw(RequestedPassword.c_str(), SavedPassword.data());
+        const int result = bcrypt_checkpw(RequestedPassword.c_str(), SavedPassword.c_str());
         isPasswordMatch_ = Id != InvalidId && result == 0;
     }
 

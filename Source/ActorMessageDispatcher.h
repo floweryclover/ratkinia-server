@@ -25,12 +25,11 @@ public:
 
     ActorMessageDispatcher& operator=(ActorMessageDispatcher&&) = delete;
 
-    template<typename TActorName>
     [[nodiscard]]
     // ReSharper disable once CppMemberFunctionMayBeConst
-    bool TryPushMessageTo(TActorName&& actorName, std::unique_ptr<DynamicMessage> message)
+    bool TryPushMessageTo(const auto& actorName, std::unique_ptr<DynamicMessage> message)
     {
-        return actorRegistry_.TryPushMessageTo(std::forward<TActorName>(actorName), std::move(message));
+        return actorRegistry_.TryPushMessageTo(actorName, std::move(message));
     }
 
 private:

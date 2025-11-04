@@ -11,16 +11,16 @@
 #include <vector>
 #include <mutex>
 
-class ActorMessageDispatcher;
 class ActorNetworkInterface;
-class DatabaseServer;
+class ActorMessageDispatcher;
+class DbConnectionPool;
 
 struct ActorInitializer final
 {
     const char* const Name;
-    std::reference_wrapper<DatabaseServer> DatabaseServer;
     std::reference_wrapper<ActorNetworkInterface> ActorNetworkInterface;
     std::reference_wrapper<ActorMessageDispatcher> ActorMessageDispatcher;
+    std::reference_wrapper<DbConnectionPool> DbConnectionPool;
 };
 
 class Actor
@@ -30,9 +30,9 @@ public:
 
     explicit Actor(const ActorInitializer& initializer)
         : Name{ initializer.Name },
-          ActorNetworkInterface{ initializer.ActorNetworkInterface.get() },
-          DatabaseServer{ initializer.DatabaseServer.get() },
-          ActorMessageDispatcher{ initializer.ActorMessageDispatcher.get() },
+          Network{ initializer.ActorNetworkInterface.get() },
+          Dispatcher{ initializer.ActorMessageDispatcher.get() },
+          DbConnectionPool{ initializer.DbConnectionPool.get() },
           pushIndex_{ 0 }
     {
     }
@@ -58,9 +58,9 @@ public:
     }
 
 protected:
-    ActorNetworkInterface& ActorNetworkInterface;
-    DatabaseServer& DatabaseServer;
-    ActorMessageDispatcher& ActorMessageDispatcher;
+    ActorNetworkInterface& Network;
+    ActorMessageDispatcher& Dispatcher;
+    DbConnectionPool& DbConnectionPool;
 
     virtual void Tick()
     {

@@ -4,12 +4,15 @@
 
 #include "A_Auth.h"
 #include "Msg_Cts.h"
-#include "DatabaseServer.h"
-#include "T_Accounts.h"
 #include "Msg_SessionDisconnected.h"
 #include "ActorNetworkInterface.h"
+#include "DbConnectionPool.h"
+#include "DbConnection.h"
 #include <syncstream>
 #include <iostream>
+#include <regex>
+
+#include "DbService_Account.h"
 
 constexpr const char* FailedReason[] =
 {
@@ -103,35 +106,74 @@ void A_Auth::OnUnhandledMessageType(const RatkiniaProtocol::CtsMessageType messa
 
 void A_Auth::OnRegisterRequest(const uint32_t context, const std::string& account, const std::string& password)
 {
+    if (account.length() < 6)
+    {
+        Network.RegisterResponse(context, false, "아이디가 너무 짧습니다.");
+        return;
+    }
+    if (account.length() > 24)
+    {
+        Network.RegisterResponse(context, false, "아이디가 너무 깁니다.");
+        return;
+    }
+    if (const std::regex invalidAccountRegex{ R"([^a-z0-9_])" };
+        std::regex_search(account, invalidAccountRegex))
+    {
+        Network.RegisterResponse(context, false, "아이디는 영문 소문자, 숫자 또는 언더스코어(_)로만 구성되어야 합니다.");
+        return;
+    }
+
+
+    if (password.length() < 8)
+    {
+        Network.RegisterResponse(context, false, "패스워드가 너무 짧습니다.");
+        return;
+    }
+    if (password.length() > 32)
+    {
+        Network.RegisterResponse(context, false, "패스워드가 너무 깁니다.");
+        return;
+    }
+    if (const std::regex invalidPasswordRegex{ R"([^a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])" };
+        std::regex_search(password, invalidPasswordRegex))
+    {
+        Network.RegisterResponse(context, false, "패스워드에 허용되지 않는 문자가 존재합니다.");
+        return;
+    }
+
+    {
+        std::scoped_lock lock{ authJobBackgroundQueueMutex_ };
+        authJobBackgroundQueue_.emplace(std::in_place_type<RegisterJob>, context, account, password);
+    }
 }
 
 void A_Auth::OnLoginRequest(const uint32_t context, const std::string& account, const std::string& password)
 {
     if (contextIdMap_.contains(context))
     {
-        ActorNetworkInterface.Notify(context, RatkiniaProtocol::Notify_Type_Fatal, "이미 로그인되어 있는 상태입니다.");
-        ActorNetworkInterface.DisconnectSession(context);
+        Network.Notify(context, RatkiniaProtocol::Notify_Type_Fatal, "이미 로그인되어 있는 상태입니다.");
+        Network.DisconnectSession(context);
         return;
     }
 
-    const auto row = DatabaseServer.Get<T_Accounts>().TryGetAccountByUserId(account);
-    std::array<char, 64> savedPassword;
-    uint32_t pkeyId = LoginJob::InvalidId;
-    if (row)
+    if (auto dbConnection = DbConnectionPool.Acquire();
+        const auto pair = dbConnection.Access<DbService_Account>().GetAccountIdPasswordPair(account))
     {
-        pkeyId = row->Id;
-        const auto savedPasswordString = row->Password;
-        const size_t copySize = savedPasswordString.size() + 1;
-        memcpy(savedPassword.data(), savedPasswordString.c_str(), copySize);
+        std::lock_guard lock{ authJobBackgroundQueueMutex_ };
+        authJobBackgroundQueue_.emplace(std::in_place_type<LoginJob>,
+                                        context,
+                                        pair->first,
+                                        password,
+                                        std::move(pair->second));
     }
     else
     {
-        memcpy(savedPassword.data(), EmptyHashedPassword.c_str(), EmptyHashedPassword.size() + 1);
-    }
-
-    {
-        std::lock_guard lock{authJobBackgroundQueueMutex_};
-        authJobBackgroundQueue_.emplace(LoginJob{context, pkeyId, password, savedPassword});
+        std::lock_guard lock{ authJobBackgroundQueueMutex_ };
+        authJobBackgroundQueue_.emplace(std::in_place_type<LoginJob>,
+                                        context,
+                                        LoginJob::InvalidId,
+                                        password,
+                                        EmptyHashedPassword);
     }
 }
 
@@ -141,7 +183,7 @@ void A_Auth::Tick()
     {
         const auto job = [&]() -> std::optional<AuthJob>
         {
-            std::scoped_lock lock{authJobForegroundQueueMutex_};
+            std::scoped_lock lock{ authJobForegroundQueueMutex_ };
 
             if (authJobForegroundQueue_.empty())
             {
@@ -164,7 +206,7 @@ void A_Auth::Tick()
 
             if (!loginJob.IsPasswordMatch())
             {
-                ActorNetworkInterface.LoginResponse(loginJob.Context, RatkiniaProtocol::LoginResponse_LoginResult_Failure);
+                Network.LoginResponse(loginJob.Context, RatkiniaProtocol::LoginResponse_LoginResult_Failure);
                 return;
             }
 
@@ -186,33 +228,37 @@ void A_Auth::Tick()
 
             if (contextAddResult == AuthenticationResult::Success)
             {
-                ActorNetworkInterface.LoginResponse(loginJob.Context, RatkiniaProtocol::LoginResponse_LoginResult_Success);
+                Network.LoginResponse(loginJob.Context, RatkiniaProtocol::LoginResponse_LoginResult_Success);
             }
             else if (contextAddResult == AuthenticationResult::IdAlreadyOnline)
             {
-                ActorNetworkInterface.LoginResponse(loginJob.Context,
-                                                RatkiniaProtocol::LoginResponse_LoginResult_DuplicateAccount);
+                Network.LoginResponse(loginJob.Context,
+                                      RatkiniaProtocol::LoginResponse_LoginResult_DuplicateAccount);
             }
             else
             {
-                ActorNetworkInterface.LoginResponse(loginJob.Context,
-                                                RatkiniaProtocol::LoginResponse_LoginResult_DuplicateContext);
+                Network.LoginResponse(loginJob.Context,
+                                      RatkiniaProtocol::LoginResponse_LoginResult_DuplicateContext);
             }
         }
         else
         {
             auto& registerJob = std::get<RegisterJob>(*job);
-            const auto result = DatabaseServer.Get<T_Accounts>().TryCreateAccount(
-                registerJob.Id,
-                registerJob.GetHashedPassword());
 
-            if (result != T_Accounts::CreateAccountResult::Success)
+            auto dbConnection = DbConnectionPool.Acquire();
+            const auto result =
+                dbConnection
+                .Access<DbService_Account>()
+                .TryCreateAccount(registerJob.Id,
+                                  registerJob.GetHashedPassword());
+
+            if (result != DbService_Account::CreateAccountResult::Success)
             {
-                ActorNetworkInterface.RegisterResponse(registerJob.Context, false, FailedReason[static_cast<int>(result)]);
+                Network.RegisterResponse(registerJob.Context, false, FailedReason[static_cast<int>(result)]);
                 return;
             }
 
-            ActorNetworkInterface.RegisterResponse(registerJob.Context, true, "");
+            Network.RegisterResponse(registerJob.Context, true, "");
         }
     }
 }

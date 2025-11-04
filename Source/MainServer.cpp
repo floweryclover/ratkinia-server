@@ -4,9 +4,8 @@
 
 #include "MainServer.h"
 #include "ActorMessageDispatcher.h"
-#include "DatabaseRegistrar.h"
+#include "DbConnectionPool.h"
 #include "NetworkServer.h"
-#include "DatabaseServer.h"
 #include "ActorNetworkInterface.h"
 #include "ActorRegistry.h"
 #include "A_Auth.h"
@@ -15,6 +14,7 @@ MainServer::MainServer(const uint32_t mainWorkerThreadsCount,
                        const char* const listenAddress,
                        const uint16_t listenPort,
                        const char* const dbHost,
+                       const size_t maxDbConnections,
                        const uint16_t acceptPoolSize,
                        const char* const certificateFile,
                        const char* const privateKeyFile)
@@ -32,8 +32,8 @@ MainServer::MainServer(const uint32_t mainWorkerThreadsCount,
               certificateFile,
               privateKeyFile)
       },
-ActorNetworkInterface{ std::make_unique<class ActorNetworkInterface>(*NetworkServer) },
-      DatabaseServer{ std::make_unique<class DatabaseServer>(dbHost) },
+      ActorNetworkInterface{ std::make_unique<class ActorNetworkInterface>(*NetworkServer) },
+      DbConnectionPool{ std::make_unique<class DbConnectionPool>(dbHost, maxDbConnections) },
       workerThreadsWorkVersion_{ 0 },
       mainThreadShouldWakeup_{ false },
       workingThreadCount_{ WorkerThreadsCount }
@@ -43,16 +43,13 @@ ActorNetworkInterface{ std::make_unique<class ActorNetworkInterface>(*NetworkSer
         workerThreads_.emplace_back(&MainServer::WorkerThreadBody, this, i);
     }
 
-    RegisterDatabase(*DatabaseServer);
-    DatabaseServer->Finalize();
-
     ActorRegistry->Register(std::make_unique<A_Auth>(
         ActorInitializer
         {
             "A_Auth",
-            *DatabaseServer,
             *ActorNetworkInterface,
-            *ActorMessageDispatcher
+            *ActorMessageDispatcher,
+            *DbConnectionPool
         }));
 }
 
