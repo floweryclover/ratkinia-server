@@ -2,8 +2,8 @@
 // Created by floweryclover on 2025-11-02.
 //
 
-#ifndef READONLYACTORREGISTRY_H
-#define READONLYACTORREGISTRY_H
+#ifndef ACTORMESSAGEDISPATCHER_H
+#define ACTORMESSAGEDISPATCHER_H
 
 #include "ActorRegistry.h"
 
@@ -36,4 +36,4 @@ private:
     ActorRegistry& actorRegistry_;
 };
 
-#endif //READONLYACTORREGISTRY_H
+#endif //ACTORMESSAGEDISPATCHER_H
