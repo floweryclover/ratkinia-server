@@ -21,14 +21,6 @@ constexpr const char* FailedReason[] =
     "알 수 없는 에러가 발생하였습니다."
 };
 
-A_Auth::A_Auth(const ActorInitializer& initializer)
-    : Actor{ initializer },
-      authThread_{ &A_Auth::AuthBackgroundThreadBody, this }
-{
-    Accept<Msg_Cts>(this);
-    Accept<Msg_SessionDisconnected>(this);
-}
-
 void A_Auth::AuthBackgroundThreadBody()
 {
     std::osyncstream{ std::cout } << "A_Auth 백그라운드 스레드 시작" << std::endl;

@@ -17,35 +17,39 @@ class DbConnectionPool;
 
 struct ActorInitializer final
 {
-    const char* const Name;
     std::reference_wrapper<ActorNetworkInterface> ActorNetworkInterface;
     std::reference_wrapper<ActorMessageDispatcher> ActorMessageDispatcher;
     std::reference_wrapper<DbConnectionPool> DbConnectionPool;
 };
 
-class Actor
+template <typename... TMessage>
+struct Accept
+{
+};
+
+class DynamicActor
 {
 public:
     const std::string Name;
 
-    explicit Actor(const ActorInitializer& initializer)
-        : Name{ initializer.Name },
-          Network{ initializer.ActorNetworkInterface.get() },
-          Dispatcher{ initializer.ActorMessageDispatcher.get() },
-          DbConnectionPool{ initializer.DbConnectionPool.get() },
-          pushIndex_{ 0 }
+    explicit DynamicActor(std::string name, const ActorInitializer& initializer)
+        : Name{std::move(name)},
+          Network{initializer.ActorNetworkInterface.get()},
+          Dispatcher{initializer.ActorMessageDispatcher.get()},
+          DbConnectionPool{initializer.DbConnectionPool.get()},
+          pushIndex_{0}
     {
     }
 
-    virtual ~Actor() = default;
+    virtual ~DynamicActor() = default;
 
-    Actor(const Actor&) = delete;
+    DynamicActor(const DynamicActor&) = delete;
 
-    Actor& operator=(const Actor&) = delete;
+    DynamicActor& operator=(const DynamicActor&) = delete;
 
-    Actor(Actor&&) = delete;
+    DynamicActor(DynamicActor&&) = delete;
 
-    Actor& operator=(Actor&&) = delete;
+    DynamicActor& operator=(DynamicActor&&) = delete;
 
     void Run();
 
@@ -53,7 +57,7 @@ public:
     {
         ERR_FAIL_COND(message == nullptr);
 
-        std::scoped_lock lock{ pushMutex_ };
+        std::scoped_lock lock{pushMutex_};
         messageQueue_[pushIndex_].emplace_back(std::move(message));
     }
 
@@ -66,25 +70,50 @@ protected:
     {
     }
 
-    template<typename TMessage>
-    void Accept([[maybe_unused]] auto derivedActor)
+    void RegisterHandler(const uint32_t typeIndex, void (*handler)(DynamicActor&, std::unique_ptr<DynamicMessage>))
     {
-        const auto [iter, emplaced] = messageHandlers_.emplace(
-            TMessage::GetTypeIndex(),
-            [](Actor& actor, std::unique_ptr<DynamicMessage> message)
-            {
-                static_cast<std::remove_pointer_t<decltype(derivedActor)>&>(actor).Handle(
-                    std::unique_ptr<TMessage>(static_cast<TMessage*>(message.release())));
-            });
+        const auto [iter, emplaced] = messageHandlers_.try_emplace(typeIndex, handler);
+        CRASH_COND(!emplaced);
     }
 
 private:
     std::mutex pushMutex_;
     int pushIndex_;
     std::vector<std::unique_ptr<DynamicMessage>> messageQueue_[2];
-    absl::flat_hash_map<uint32_t, void(*)(Actor&, std::unique_ptr<DynamicMessage>)> messageHandlers_;
+    absl::flat_hash_map<uint32_t, void(*)(DynamicActor&, std::unique_ptr<DynamicMessage>)> messageHandlers_;
 
     virtual void OnUnknownMessageReceived(std::unique_ptr<DynamicMessage> message) = 0;
 };
+
+template <typename TDerivedActor>
+class Actor : public DynamicActor
+{
+public:
+    explicit Actor(std::string name, const ActorInitializer& initializer)
+        : DynamicActor{std::move(name), initializer}
+    {
+        RegisterHandlers(static_cast<TDerivedActor*>(nullptr));
+    }
+
+private:
+    template <typename... TMessages>
+    void RegisterHandlers(Accept<TMessages...>*)
+    {
+        (RegisterHandler(TMessages::GetTypeIndex(), [](DynamicActor& actor, std::unique_ptr<DynamicMessage> message)
+        {
+            static_cast<TDerivedActor&>(actor).Handle(
+                std::unique_ptr<TMessages>(static_cast<TMessages*>(message.release())));
+        }), ...);
+    }
+
+    void RegisterHandlers(...)
+    {
+    }
+};
+
+#define ACTOR(TActor)                                                                               \
+public:                                                                                             \
+    explicit TActor(const ActorInitializer& initializer) : Actor(#TActor, initializer) {} \
+private:
 
 #endif //ACTOR_H

@@ -54,6 +54,32 @@ public:
         InitiateSend(*session->second.get());
     }
 
+    [[nodiscard]]
+    bool TryChangeAssociatedActor(const uint32_t context, const auto& currentActorName, auto&& newActorName)
+    {
+        std::unique_lock lock{ sessionsMutex_ };
+        const auto session = sessions_.find(context);
+        if (session == sessions_.end() || session->second->AssociatedActor != currentActorName)
+        {
+            return session == sessions_.end(); // 종료되어 사라진 세션에 대해서는 정상 동작 판정
+        }
+
+        session->second->AssociatedActor = std::forward<decltype(newActorName)>(newActorName);
+        return true;
+    }
+
+    void ChangeAssociatedActor(const uint32_t context, auto&& newActorName)
+    {
+        std::unique_lock lock{ sessionsMutex_ };
+        const auto session = sessions_.find(context);
+        if (session == sessions_.end())
+        {
+            return;
+        }
+
+        session->second->AssociatedActor = std::forward<decltype(newActorName)>(newActorName);
+    }
+
 private:
     const std::string InitialAssociatedActor;
     const HANDLE Iocp;

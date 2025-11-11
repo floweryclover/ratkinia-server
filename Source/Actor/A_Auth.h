@@ -14,8 +14,12 @@
 struct Msg_Cts;
 struct Msg_SessionDisconnected;
 
-class A_Auth final : public Actor, public RatkiniaProtocol::ICtsStub<A_Auth>
+class A_Auth final : public Actor<A_Auth>,
+                     public Accept<Msg_Cts, Msg_SessionDisconnected>,
+                     public RatkiniaProtocol::ICtsStub<A_Auth>
 {
+    ACTOR(A_Auth)
+
     enum class AuthenticationResult : uint8_t
     {
         Success,
@@ -24,8 +28,6 @@ class A_Auth final : public Actor, public RatkiniaProtocol::ICtsStub<A_Auth>
     };
 
 public:
-    explicit A_Auth(const ActorInitializer& initializer);
-
     void Handle(std::unique_ptr<Msg_Cts> message);
 
     void Handle(std::unique_ptr<Msg_SessionDisconnected> message);

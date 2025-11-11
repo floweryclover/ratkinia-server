@@ -24,6 +24,17 @@ public:
         networkServer_->DisconnectSession(context);
     }
 
+    [[nodiscard]]
+    bool TryChangeAssociatedActor(const uint32_t context, const auto& currentActorName, auto&& newActorName)
+    {
+        return networkServer_->TryChangeAssociatedActor(context, currentActorName, std::forward<decltype(newActorName)>(newActorName));
+    }
+
+    void ChangeAssociatedActor(const uint32_t context, auto&& newActorName)
+    {
+        networkServer_->ChangeAssociatedActor(context, std::forward<decltype(newActorName)>(newActorName));
+    }
+
 private:
     NetworkServer* networkServer_;
 };

@@ -10,4 +10,3 @@ void ActorRegistry::Register(std::unique_ptr<Actor> actor)
     auto name = actor->Name;
     actorRunQueue_.emplace_back(actors_.emplace(std::move(actor->Name), std::move(actor)).first->second.get());
 }
-

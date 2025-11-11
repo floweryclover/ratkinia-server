@@ -11,6 +11,13 @@
 
 class ActorRegistry final
 {
+    struct ChangeAssociationRequest
+    {
+        uint32_t Context;
+        uint32_t CurrentActorId;
+        uint32_t NewActorId;
+    };
+
 public:
     explicit ActorRegistry() = default;
 
@@ -24,7 +31,8 @@ public:
 
     ActorRegistry& operator=(ActorRegistry&&) = delete;
 
-    void Register(std::unique_ptr<Actor> actor);
+    template<typename TActor>
+    void Create();
 
     [[nodiscard]]
     bool TryPushMessageTo(const auto& actorName, std::unique_ptr<DynamicMessage> message)
@@ -39,15 +47,9 @@ public:
         return true;
     }
 
-    [[nodiscard]]
-    Actor* Get(const uint32_t actorIndex)
-    {
-        return actorIndex < actorRunQueue_.size() ? actorRunQueue_[actorIndex] : nullptr;
-    }
-
 private:
-    absl::flat_hash_map<std::string, std::unique_ptr<Actor>> actors_;
-    std::vector<Actor*> actorRunQueue_;
+    absl::flat_hash_map<std::string, std::unique_ptr<DynamicActor>> actors_;
+    std::vector<DynamicActor*> actorRunQueue_;
 };
 
 #endif //ACTORREGISTRY_H

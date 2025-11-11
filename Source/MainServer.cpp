@@ -43,14 +43,7 @@ MainServer::MainServer(const uint32_t mainWorkerThreadsCount,
         workerThreads_.emplace_back(&MainServer::WorkerThreadBody, this, i);
     }
 
-    ActorRegistry->Register(std::make_unique<A_Auth>(
-        ActorInitializer
-        {
-            "A_Auth",
-            *ActorNetworkInterface,
-            *ActorMessageDispatcher,
-            *DbConnectionPool
-        }));
+    ActorRegistry->Create<A_Auth>();
 }
 
 MainServer::~MainServer() = default;
