@@ -5,7 +5,7 @@
 #ifndef ACTORMESSAGEDISPATCHER_H
 #define ACTORMESSAGEDISPATCHER_H
 
-#include "ActorRegistry.h"
+#include "Actor/ActorRegistry.h"
 
 class ActorMessageDispatcher final
 {

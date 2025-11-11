@@ -43,7 +43,7 @@ MainServer::MainServer(const uint32_t mainWorkerThreadsCount,
         workerThreads_.emplace_back(&MainServer::WorkerThreadBody, this, i);
     }
 
-    ActorRegistry->Create<A_Auth>();
+    ActorRegistry-><A_Auth>();
 }
 
 MainServer::~MainServer() = default;
@@ -94,21 +94,20 @@ void MainServer::WorkerThreadBody(const uint32_t)
         while (true)
         {
             const uint32_t workIndex = workIndex_.fetch_add(1, std::memory_order_relaxed);
-            const auto actor = ActorRegistry->Get(workIndex);
-            if (!actor)
+            if (ActorRegistry->RunByIndex(workIndex))
             {
-                if (workingThreadCount_.fetch_sub(1, std::memory_order_relaxed) == 1)
-                {
-                    std::scoped_lock lock{ mainThreadShouldWakeupMutex_ };
-                    mainThreadShouldWakeup_ = true;
-                    mainThreadWakeupConditionVariable_.notify_one();
-                }
-
-                ++desiredVersion;
-                break;
+                continue;
             }
 
-            actor->Run();
+            if (workingThreadCount_.fetch_sub(1, std::memory_order_relaxed) == 1)
+            {
+                std::scoped_lock lock{ mainThreadShouldWakeupMutex_ };
+                mainThreadShouldWakeup_ = true;
+                mainThreadWakeupConditionVariable_.notify_one();
+            }
+
+            ++desiredVersion;
+            break;
         }
     }
     // ReSharper disable once CppDFAUnreachableCode
